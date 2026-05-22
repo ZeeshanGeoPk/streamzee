@@ -2,6 +2,7 @@ package com.example.streamzee.data
 
 import retrofit2.http.GET
 import retrofit2.http.Header
+import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface TmdbApi {
@@ -17,4 +18,11 @@ interface TmdbApi {
         @Query("include_adult") includeAdult: Boolean = false,
         @Query("page") page: Int = 1,
     ): TmdbMovieResponse
+
+    @GET("movie/{movie_id}")
+    suspend fun getMovieDetails(
+        @Header("Authorization") authorization: String,
+        @Path("movie_id") movieId: Long,
+        @Query("language") language: String = "en-US",
+    ): TmdbMovie
 }

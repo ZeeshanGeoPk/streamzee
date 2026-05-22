@@ -16,6 +16,7 @@ import kotlinx.coroutines.launch
 sealed interface Screen {
     object Home : Screen
     object Search : Screen
+    object Library : Screen
     data class Details(val movie: TmdbMovie) : Screen
     object Setup : Screen
 }
@@ -25,10 +26,12 @@ data class MainUiState(
     val currentScreen: Screen = Screen.Setup,
     val trendingMovies: List<TmdbMovie> = emptyList(),
     val savedIds: Set<String> = emptySet(),
+    val savedMovies: List<TmdbMovie> = emptyList(),
     val searchQuery: String = "",
     val searchResults: List<TmdbMovie> = emptyList(),
     val isLoading: Boolean = false,
     val isSearching: Boolean = false,
+    val isLoadingSaved: Boolean = false,
     val errorMessage: String? = null,
 )
 
@@ -60,8 +63,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             repository.savedIdsFlow().collectLatest { savedIds ->
                 _uiState.update { it.copy(savedIds = savedIds) }
+                if (_uiState.value.currentScreen is Screen.Library) {
+                    loadSavedMovies(_uiState.value.apiKey, savedIds)
+                }
             }
         }
+    }
+
+    fun updateSearchQuery(query: String) {
+        _uiState.update { it.copy(searchQuery = query) }
     }
 
     fun saveApiKey(apiKey: String) {
@@ -111,7 +121,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 return@launch
             }
             val trimmedQuery = query.trim()
-            _uiState.update { it.copy(searchQuery = trimmedQuery, isSearching = true, errorMessage = null) }
+            _uiState.update { it.copy(searchQuery = query, isSearching = true, errorMessage = null) }
             if (trimmedQuery.isBlank()) {
                 _uiState.update { it.copy(searchResults = emptyList(), isSearching = false) }
                 return@launch
@@ -139,6 +149,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(currentScreen = Screen.Search, errorMessage = null) }
     }
 
+    fun openLibrary() {
+        _uiState.update { it.copy(currentScreen = Screen.Library, errorMessage = null) }
+        loadSavedMovies(_uiState.value.apiKey, _uiState.value.savedIds)
+    }
+
     fun openDetails(movie: TmdbMovie) {
         _uiState.update { it.copy(currentScreen = Screen.Details(movie)) }
     }
@@ -146,6 +161,29 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun toggleSaved(movieId: String) {
         viewModelScope.launch {
             repository.toggleSaved(movieId)
+        }
+    }
+
+    private fun loadSavedMovies(apiKey: String?, savedIds: Set<String>) {
+        if (apiKey.isNullOrBlank() || savedIds.isEmpty()) {
+            _uiState.update { it.copy(savedMovies = emptyList(), isLoadingSaved = false) }
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingSaved = true, errorMessage = null) }
+            try {
+                val movies = repository.fetchSavedMovies(apiKey, savedIds)
+                _uiState.update { it.copy(savedMovies = movies, isLoadingSaved = false) }
+            } catch (exception: Exception) {
+                _uiState.update {
+                    it.copy(
+                        savedMovies = emptyList(),
+                        isLoadingSaved = false,
+                        errorMessage = "Unable to load saved library: ${exception.message ?: "network error"}",
+                    )
+                }
+            }
         }
     }
 

@@ -11,6 +11,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import com.example.streamzee.ui.screens.detailsScreen
 import com.example.streamzee.ui.screens.homeScreen
+import com.example.streamzee.ui.screens.libraryScreen
 import com.example.streamzee.ui.screens.searchScreen
 import com.example.streamzee.ui.screens.setupScreen
 import com.example.streamzee.ui.theme.streamzeeTheme
@@ -39,6 +40,7 @@ fun streamzeeApp(viewModel: MainViewModel) {
                         trendingMovies = uiState.trendingMovies,
                         savedIds = uiState.savedIds,
                         onSearchClicked = viewModel::openSearch,
+                        onLibraryClicked = viewModel::openLibrary,
                         onMovieClicked = viewModel::openDetails,
                         onToggleSave = viewModel::toggleSaved,
                         isLoading = uiState.isLoading,
@@ -48,10 +50,21 @@ fun streamzeeApp(viewModel: MainViewModel) {
                     is Screen.Search -> searchScreen(
                         query = uiState.searchQuery,
                         searchResults = uiState.searchResults,
-                        onQueryChange = viewModel::searchMovies,
+                        onQueryChange = viewModel::updateSearchQuery,
+                        onSearchSubmit = viewModel::searchMovies,
                         onMovieClicked = viewModel::openDetails,
                         onBack = viewModel::openHome,
                         isSearching = uiState.isSearching,
+                        errorMessage = uiState.errorMessage,
+                        modifier = contentModifier,
+                    )
+                    is Screen.Library -> libraryScreen(
+                        savedMovies = uiState.savedMovies,
+                        savedIds = uiState.savedIds,
+                        onMovieClicked = viewModel::openDetails,
+                        onRemove = viewModel::toggleSaved,
+                        onBack = viewModel::openHome,
+                        isLoading = uiState.isLoadingSaved,
                         errorMessage = uiState.errorMessage,
                         modifier = contentModifier,
                     )

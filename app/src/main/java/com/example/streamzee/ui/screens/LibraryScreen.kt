@@ -1,5 +1,3 @@
-@file:Suppress("DEPRECATION")
-
 package com.example.streamzee.ui.screens
 
 import androidx.compose.foundation.Image
@@ -15,13 +13,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.LibraryBooks
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -39,13 +33,12 @@ import com.example.streamzee.data.TmdbMovie
 private const val TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w300"
 
 @Composable
-fun homeScreen(
-    trendingMovies: List<TmdbMovie>,
+fun libraryScreen(
+    savedMovies: List<TmdbMovie>,
     savedIds: Set<String>,
-    onSearchClicked: () -> Unit,
-    onLibraryClicked: () -> Unit,
     onMovieClicked: (TmdbMovie) -> Unit,
-    onToggleSave: (String) -> Unit,
+    onRemove: (String) -> Unit,
+    onBack: () -> Unit,
     isLoading: Boolean,
     errorMessage: String?,
     modifier: Modifier = Modifier,
@@ -61,17 +54,12 @@ fun homeScreen(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Streamzee",
+                text = "Saved Library",
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold,
             )
-            Row {
-                IconButton(onClick = onLibraryClicked) {
-                    Icon(imageVector = Icons.Filled.LibraryBooks, contentDescription = "Saved library")
-                }
-                Button(onClick = onSearchClicked) {
-                    Text("Search")
-                }
+            Button(onClick = onBack) {
+                Text("Home")
             }
         }
 
@@ -93,21 +81,28 @@ fun homeScreen(
 
         if (isLoading) {
             Text(
-                text = "Loading trending movies…",
+                text = "Loading saved movies…",
                 style = MaterialTheme.typography.bodyLarge,
             )
+        }
+
+        if (savedMovies.isEmpty() && !isLoading) {
+            Text(
+                text = "No saved movies yet. Tap the library icon from Home to add favorites.",
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            return
         }
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            items(trendingMovies) { movie ->
-                movieCard(
+            items(savedMovies) { movie ->
+                savedMovieCard(
                     movie = movie,
-                    isSaved = savedIds.contains(movie.id.toString()),
                     onClick = { onMovieClicked(movie) },
-                    onToggleSave = { onToggleSave(movie.id.toString()) },
+                    onRemove = { onRemove(movie.id.toString()) },
                 )
             }
         }
@@ -115,11 +110,10 @@ fun homeScreen(
 }
 
 @Composable
-private fun movieCard(
+private fun savedMovieCard(
     movie: TmdbMovie,
-    isSaved: Boolean,
     onClick: () -> Unit,
-    onToggleSave: () -> Unit,
+    onRemove: () -> Unit,
 ) {
     val expanded = remember { mutableStateOf(false) }
     val overview = movie.overview.orEmpty().ifEmpty { "No overview available." }
@@ -133,9 +127,7 @@ private fun movieCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        ),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             if (!movie.posterPath.isNullOrBlank()) {
@@ -149,20 +141,11 @@ private fun movieCard(
                 )
                 Spacer(modifier = Modifier.height(12.dp))
             }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = movie.displayTitle,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Button(onClick = onToggleSave) {
-                    Text(if (isSaved) "Unsave" else "Save")
-                }
-            }
+            Text(
+                text = movie.displayTitle,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = movie.releaseDate.orEmpty().ifEmpty { "Unknown release" },
@@ -177,6 +160,10 @@ private fun movieCard(
                 TextButton(onClick = { expanded.value = !expanded.value }) {
                     Text(if (expanded.value) "Show less" else "Read more")
                 }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Button(onClick = onRemove) {
+                Text("Remove from library")
             }
         }
     }
