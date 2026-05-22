@@ -29,8 +29,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.streamzee.data.TmdbMovie
@@ -119,7 +124,7 @@ private fun searchResultCard(movie: TmdbMovie, onClick: () -> Unit) {
     val displayOverview = if (expanded.value || overview.length <= 120) {
         overview
     } else {
-        overview.take(120).trimEnd() + "…"
+        overview.take(85).trimEnd()
     }
     Card(
         modifier = Modifier
@@ -150,13 +155,32 @@ private fun searchResultCard(movie: TmdbMovie, onClick: () -> Unit) {
                 style = MaterialTheme.typography.bodySmall,
             )
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = displayOverview,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            if (overview.length > 120) {
-                TextButton(onClick = { expanded.value = !expanded.value }) {
-                    Text(if (expanded.value) "Show less" else "Read more")
+            if (!expanded.value && overview.length > 120) {
+                val annotatedOverview = buildAnnotatedString {
+                    append(displayOverview)
+                    append("… ")
+                    pushStringAnnotation(tag = "READ_MORE", annotation = "READ_MORE")
+                    withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary)) {
+                        append("read more")
+                    }
+                    pop()
+                }
+                Text(
+                    text = annotatedOverview,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.clickable { expanded.value = true },
+                )
+            } else {
+                Text(
+                    text = displayOverview,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                if (overview.length > 120) {
+                    TextButton(onClick = { expanded.value = !expanded.value }) {
+                        Text(if (expanded.value) "Show less" else "Read more")
+                    }
                 }
             }
         }

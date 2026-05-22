@@ -1,6 +1,5 @@
 package com.example.streamzee.ui.screens
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,14 +14,14 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import coil.compose.rememberAsyncImagePainter
+import coil.compose.AsyncImage
 import com.example.streamzee.data.TmdbMovie
+
+private const val TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w300"
 
 @Composable
 fun detailsScreen(
@@ -56,6 +55,18 @@ fun detailsScreen(
             text = "Release date: ${movie.releaseDate.orEmpty().ifEmpty { "Unknown" }}",
             style = MaterialTheme.typography.bodyLarge,
         )
+
+        if (!movie.posterPath.isNullOrBlank()) {
+            AsyncImage(
+                model = TMDB_IMAGE_BASE_URL + movie.posterPath,
+                contentDescription = movie.displayTitle,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(280.dp),
+                contentScale = ContentScale.Crop,
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+        }
 
         Card(
             modifier = Modifier.fillMaxWidth(),
