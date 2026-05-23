@@ -32,7 +32,7 @@ fun detailsScreen(
     isSaved: Boolean,
     onBack: () -> Unit,
     onToggleSave: () -> Unit,
-    onPlaySource: (PlaybackSource) -> Unit,
+    onPlay: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -95,22 +95,12 @@ fun detailsScreen(
         }
 
         Text(
-            text = "Choose a playback source",
+            text = "Play using the best available source",
             style = MaterialTheme.typography.titleMedium,
         )
 
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            playerSources.forEach { source ->
-                Button(onClick = { onPlaySource(source) }, modifier = Modifier.fillMaxWidth()) {
-                    Text(source.label)
-                }
-                source.note?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-            }
+        Button(onClick = onPlay, modifier = Modifier.fillMaxWidth()) {
+            Text("Play")
         }
     }
 }

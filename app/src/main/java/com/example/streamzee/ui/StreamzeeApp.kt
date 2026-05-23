@@ -9,6 +9,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
+import com.example.streamzee.data.playerSources
 import com.example.streamzee.ui.screens.detailsScreen
 import com.example.streamzee.ui.screens.homeScreen
 import com.example.streamzee.ui.screens.libraryScreen
@@ -75,7 +76,7 @@ fun streamzeeApp(viewModel: MainViewModel) {
                         isSaved = uiState.savedIds.contains(screen.movie.id.toString()),
                         onBack = viewModel::openHome,
                         onToggleSave = { viewModel.toggleSaved(screen.movie.id.toString()) },
-                        onPlaySource = { source -> viewModel.openPlayer(screen.movie, source) },
+                        onPlay = { viewModel.openPlayer(screen.movie, playerSources.first()) },
                         modifier = contentModifier,
                     )
                     is Screen.Player -> playerScreen(
