@@ -17,6 +17,8 @@ object AppDataStore {
     private val TMDB_API_KEY = stringPreferencesKey("tmdb_api_key")
     private val SAVED_IDS = stringSetPreferencesKey("saved_media_ids")
 
+    private fun watchProgressKey(movieId: String) = stringPreferencesKey("watch_progress_$movieId")
+
     fun apiKeyFlow(context: Context): Flow<String?> =
         context.dataStore.data.map { preferences: Preferences -> preferences[TMDB_API_KEY] }
 
@@ -32,6 +34,17 @@ object AppDataStore {
     suspend fun setSavedIds(context: Context, ids: Set<String>) {
         context.dataStore.edit { preferences: MutablePreferences ->
             preferences[SAVED_IDS] = ids
+        }
+    }
+
+    fun watchProgressFlow(context: Context, movieId: String): Flow<Long> =
+        context.dataStore.data.map { preferences: Preferences ->
+            preferences[watchProgressKey(movieId)]?.toLongOrNull() ?: 0L
+        }
+
+    suspend fun saveWatchProgress(context: Context, movieId: String, positionMs: Long) {
+        context.dataStore.edit { preferences: MutablePreferences ->
+            preferences[watchProgressKey(movieId)] = positionMs.toString()
         }
     }
 }

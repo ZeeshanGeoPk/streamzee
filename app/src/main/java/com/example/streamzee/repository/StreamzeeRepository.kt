@@ -50,4 +50,11 @@ class StreamzeeRepository(
             }
         }.awaitAll()
     }
+
+    fun watchProgressFlow(movieId: String): Flow<Long> =
+        AppDataStore.watchProgressFlow(context, movieId)
+
+    suspend fun saveWatchProgress(movieId: String, positionMs: Long) {
+        AppDataStore.saveWatchProgress(context, movieId, positionMs)
+    }
 }

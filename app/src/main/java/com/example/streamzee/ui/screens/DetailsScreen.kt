@@ -19,16 +19,20 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.example.streamzee.data.PlaybackSource
 import com.example.streamzee.data.TmdbMovie
+import com.example.streamzee.data.playerSources
 
 private const val TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w300"
 
 @Composable
 fun detailsScreen(
     movie: TmdbMovie,
+    resumePositionMs: Long?,
     isSaved: Boolean,
     onBack: () -> Unit,
     onToggleSave: () -> Unit,
+    onPlaySource: (PlaybackSource) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -56,6 +60,13 @@ fun detailsScreen(
             style = MaterialTheme.typography.bodyLarge,
         )
 
+        if (resumePositionMs != null) {
+            Text(
+                text = "Resume playback at ${formatMillis(resumePositionMs)}",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+
         if (!movie.posterPath.isNullOrBlank()) {
             AsyncImage(
                 model = TMDB_IMAGE_BASE_URL + movie.posterPath,
@@ -82,5 +93,31 @@ fun detailsScreen(
                 }
             }
         }
+
+        Text(
+            text = "Choose a playback source",
+            style = MaterialTheme.typography.titleMedium,
+        )
+
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            playerSources.forEach { source ->
+                Button(onClick = { onPlaySource(source) }, modifier = Modifier.fillMaxWidth()) {
+                    Text(source.label)
+                }
+                source.note?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+        }
     }
+}
+
+private fun formatMillis(milliseconds: Long): String {
+    val totalSeconds = (milliseconds / 1000).coerceAtLeast(0)
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    return "%d:%02d".format(minutes, seconds)
 }

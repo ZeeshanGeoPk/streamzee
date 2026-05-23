@@ -4,12 +4,14 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.streamzee.data.NetworkClient
+import com.example.streamzee.data.PlaybackSource
 import com.example.streamzee.data.TmdbMovie
 import com.example.streamzee.repository.StreamzeeRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -18,6 +20,7 @@ sealed interface Screen {
     object Search : Screen
     object Library : Screen
     data class Details(val movie: TmdbMovie) : Screen
+    data class Player(val movie: TmdbMovie, val source: PlaybackSource) : Screen
     object Setup : Screen
 }
 
@@ -32,6 +35,7 @@ data class MainUiState(
     val isLoading: Boolean = false,
     val isSearching: Boolean = false,
     val isLoadingSaved: Boolean = false,
+    val currentMovieWatchProgressMs: Long? = null,
     val errorMessage: String? = null,
 )
 
@@ -142,20 +146,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun openHome() {
-        _uiState.update { it.copy(currentScreen = Screen.Home, errorMessage = null) }
+        _uiState.update { it.copy(currentScreen = Screen.Home, errorMessage = null, currentMovieWatchProgressMs = null) }
     }
 
     fun openSearch() {
-        _uiState.update { it.copy(currentScreen = Screen.Search, errorMessage = null) }
+        _uiState.update { it.copy(currentScreen = Screen.Search, errorMessage = null, currentMovieWatchProgressMs = null) }
     }
 
     fun openLibrary() {
-        _uiState.update { it.copy(currentScreen = Screen.Library, errorMessage = null) }
+        _uiState.update { it.copy(currentScreen = Screen.Library, errorMessage = null, currentMovieWatchProgressMs = null) }
         loadSavedMovies(_uiState.value.apiKey, _uiState.value.savedIds)
     }
 
     fun openDetails(movie: TmdbMovie) {
-        _uiState.update { it.copy(currentScreen = Screen.Details(movie)) }
+        _uiState.update { it.copy(currentScreen = Screen.Details(movie), errorMessage = null) }
+        loadWatchProgress(movie.id.toString())
+    }
+
+    fun openPlayer(movie: TmdbMovie, source: PlaybackSource) {
+        _uiState.update { it.copy(currentScreen = Screen.Player(movie, source), errorMessage = null) }
     }
 
     fun toggleSaved(movieId: String) {
@@ -184,6 +193,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     )
                 }
             }
+        }
+    }
+
+    private fun loadWatchProgress(movieId: String) {
+        viewModelScope.launch {
+            val positionMs = repository.watchProgressFlow(movieId).first()
+            _uiState.update { it.copy(currentMovieWatchProgressMs = positionMs.takeIf { it > 0 }) }
+        }
+    }
+
+    fun savePlaybackProgress(movieId: String, positionMs: Long) {
+        viewModelScope.launch {
+            repository.saveWatchProgress(movieId, positionMs)
+            _uiState.update { it.copy(currentMovieWatchProgressMs = positionMs.takeIf { it > 0 }) }
         }
     }
 

@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import com.example.streamzee.ui.screens.detailsScreen
 import com.example.streamzee.ui.screens.homeScreen
 import com.example.streamzee.ui.screens.libraryScreen
+import com.example.streamzee.ui.screens.playerScreen
 import com.example.streamzee.ui.screens.searchScreen
 import com.example.streamzee.ui.screens.setupScreen
 import com.example.streamzee.ui.theme.streamzeeTheme
@@ -70,9 +71,21 @@ fun streamzeeApp(viewModel: MainViewModel) {
                     )
                     is Screen.Details -> detailsScreen(
                         movie = screen.movie,
+                        resumePositionMs = uiState.currentMovieWatchProgressMs,
                         isSaved = uiState.savedIds.contains(screen.movie.id.toString()),
                         onBack = viewModel::openHome,
                         onToggleSave = { viewModel.toggleSaved(screen.movie.id.toString()) },
+                        onPlaySource = { source -> viewModel.openPlayer(screen.movie, source) },
+                        modifier = contentModifier,
+                    )
+                    is Screen.Player -> playerScreen(
+                        movie = screen.movie,
+                        source = screen.source,
+                        resumePositionMs = uiState.currentMovieWatchProgressMs,
+                        onBack = { viewModel.openDetails(screen.movie) },
+                        onPlaybackPositionUpdate = { positionMs ->
+                            viewModel.savePlaybackProgress(screen.movie.id.toString(), positionMs)
+                        },
                         modifier = contentModifier,
                     )
                 }
