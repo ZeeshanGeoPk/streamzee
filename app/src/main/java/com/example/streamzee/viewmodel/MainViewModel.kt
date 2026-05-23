@@ -36,6 +36,9 @@ data class MainUiState(
     val isSearching: Boolean = false,
     val isLoadingSaved: Boolean = false,
     val currentMovieWatchProgressMs: Long? = null,
+    val subtitleSearchResults: List<com.example.streamzee.data.SubtitleItem> = emptyList(),
+    val isSearchingSubtitles: Boolean = false,
+    val subtitleErrorMessage: String? = null,
     val errorMessage: String? = null,
 )
 
@@ -173,6 +176,39 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun searchSubtitles(
+        tmdbId: String,
+        mediaType: String,
+        season: Int? = null,
+        episode: Int? = null,
+        languages: String? = null,
+        subdlApiKey: String? = null,
+        wyzieApiKey: String? = null,
+    ) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSearchingSubtitles = true, subtitleErrorMessage = null) }
+            try {
+                val res = repository.searchSubtitles(tmdbId, mediaType, season, episode, languages, subdlApiKey, wyzieApiKey)
+                if (res.ok) {
+                    _uiState.update { it.copy(subtitleSearchResults = res.results, isSearchingSubtitles = false) }
+                } else {
+                    _uiState.update { it.copy(subtitleSearchResults = emptyList(), isSearchingSubtitles = false, subtitleErrorMessage = res.error) }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(subtitleSearchResults = emptyList(), isSearchingSubtitles = false, subtitleErrorMessage = e.message) }
+            }
+        }
+    }
+
+    suspend fun fetchSubtitleFile(fileId: String): String? {
+        return try {
+            val (ok, path) = repository.getSubtitleUrl(fileId)
+            if (ok) path else null
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     private fun loadSavedMovies(apiKey: String?, savedIds: Set<String>) {
         if (apiKey.isNullOrBlank() || savedIds.isEmpty()) {
             _uiState.update { it.copy(savedMovies = emptyList(), isLoadingSaved = false) }
@@ -199,14 +235,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private fun loadWatchProgress(movieId: String) {
         viewModelScope.launch {
             val positionMs = repository.watchProgressFlow(movieId).first()
-            _uiState.update { it.copy(currentMovieWatchProgressMs = positionMs.takeIf { it > 0 }) }
+            _uiState.update { state -> state.copy(currentMovieWatchProgressMs = positionMs.takeIf { v -> v > 0 }) }
         }
     }
 
     fun savePlaybackProgress(movieId: String, positionMs: Long) {
         viewModelScope.launch {
             repository.saveWatchProgress(movieId, positionMs)
-            _uiState.update { it.copy(currentMovieWatchProgressMs = positionMs.takeIf { it > 0 }) }
+            _uiState.update { state -> state.copy(currentMovieWatchProgressMs = positionMs.takeIf { v -> v > 0 }) }
         }
     }
 
