@@ -41,7 +41,7 @@ class StreamzeeRepository(
     }
 
     suspend fun fetchTrending(apiKey: String): List<TmdbMovie> {
-        return api.getTrendingMovies("Bearer $apiKey").results
+        return api.getTrendingAll("Bearer $apiKey").results
     }
 
     suspend fun searchMovies(apiKey: String, query: String): List<TmdbMovie> {
@@ -56,13 +56,29 @@ class StreamzeeRepository(
         val id = movieId.toLongOrNull() ?: throw IllegalArgumentException("Invalid movie ID: $movieId")
         return api.getMovieDetails("Bearer $apiKey", id)
     }
+    
+    suspend fun getTvShowDetails(apiKey: String, tvId: String): TmdbMovie {
+    val id = tvId.toLongOrNull() ?: throw IllegalArgumentException("Invalid TV ID: $tvId")
+    return api.getTvShowDetails("Bearer $apiKey", id)
+    }
 
     suspend fun fetchSavedMovies(apiKey: String, movieIds: Set<String>): List<TmdbMovie> = coroutineScope {
         movieIds.mapNotNull { id ->
             id.toLongOrNull()?.let { parsed ->
-                async { api.getMovieDetails("Bearer $apiKey", parsed) }
+                async {
+                    try {
+                        val movie = api.getMovieDetails("Bearer $apiKey", parsed)
+                        // If it's actually a TV show, TMDB movie endpoint might return 
+                        // a result without a title. We check if it's valid.
+                        if (movie.title != null) movie else api.getTvShowDetails("Bearer $apiKey", parsed)
+                    } catch (e: Exception) {
+                        try {
+                            api.getTvShowDetails("Bearer $apiKey", parsed)
+                        } catch (e2: Exception) { null }
+                    }
+                }
             }
-        }.awaitAll()
+        }.awaitAll().filterNotNull()
     }
 
     private val httpClient = OkHttpClient()

@@ -26,11 +26,23 @@ interface TmdbApi {
         @Query("include_adult") includeAdult: Boolean = false,
         @Query("page") page: Int = 1,
     ): TmdbMovieResponse
+    
+    @GET("trending/all/week") // Fetches both Movies and TV shows for the Home screen
+    suspend fun getTrendingAll(
+    @Header("Authorization") authorization: String,
+    ): TmdbMovieResponse
 
     @GET("movie/{movie_id}")
     suspend fun getMovieDetails(
         @Header("Authorization") authorization: String,
         @Path("movie_id") movieId: Long,
         @Query("language") language: String = "en-US",
+    ): TmdbMovie
+    
+    @GET("tv/{tv_id}") // Specifically for TV Show details
+    suspend fun getTvShowDetails(
+    @Header("Authorization") authorization: String,
+    @Path("tv_id") tvId: Long,
+    @Query("language") language: String = "en-US",
     ): TmdbMovie
 }

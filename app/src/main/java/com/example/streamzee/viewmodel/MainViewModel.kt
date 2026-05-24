@@ -17,6 +17,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+//val movies = repository.fetchTrending(apiKey)
+
 enum class SearchMode {
     MOVIES,
     TV,
@@ -35,6 +37,7 @@ sealed interface Screen {
         val source: PlaybackSource,
         val tvSeason: Int? = null,
         val tvEpisode: Int? = null,
+        val resumePositionMs: Long? = null,
     ) : Screen
     data class AnimeDetails(val show: AllAnimeShow) : Screen
     data class AnimePlayer(
@@ -333,7 +336,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         tvEpisode: Int? = null,
         resumePositionMs: Long? = null,
     ) {
-        _uiState.update { it.copy(currentScreen = Screen.Player(movie, source, tvSeason, tvEpisode), errorMessage = null) }
+        _uiState.update { it.copy(currentScreen = Screen.Player(movie, source, tvSeason, tvEpisode, resumePositionMs), errorMessage = null) }
     }
 
     fun openAnimePlayer(show: AllAnimeShow, episode: Int, translationType: String = "sub") {

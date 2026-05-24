@@ -21,9 +21,13 @@ data class TmdbMovie(
     @SerializedName("genre_ids") val genreIds: List<Int>? = emptyList(), // Added
 ) {
     val displayTitle: String get() = (title ?: name).orEmpty().ifEmpty { "Untitled" }
+    val isMovie: Boolean get() = mediaType?.lowercase() == "movie" || (title != null && name == null)
+    val isTv: Boolean get() = mediaType?.lowercase() == "tv" || (name != null && title == null)
     val isAnime: Boolean get() = mediaType?.lowercase() == "anime" || genreIds?.contains(16) == true
-    val isTv: Boolean get() = mediaType?.lowercase() == "tv"
-    val isMovie: Boolean get() = !isTv && !isAnime
+    // Helper to get the year regardless of format
+    val displayYear: String get() = (releaseDate ?: firstAirDate)?.take(4).orEmpty()
+
+
 }
 
 // AllAnime data models for anime episode resolution
