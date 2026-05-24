@@ -120,7 +120,7 @@ class AllAnimeApi(private val httpClient: OkHttpClient) {
                 try {
                     val obj = el.asJsonObject
                     AllAnimeShow(
-                        _id = obj.get("_id").asString,
+                        uid = obj.get("_id").asString,
                         name = obj.get("name").asString
                     )
                 } catch (_: Exception) {

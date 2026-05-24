@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.automirrored.filled.Sort
 import coil.compose.AsyncImage
 import com.example.streamzee.data.TmdbMovie
 
@@ -65,7 +66,7 @@ fun libraryScreen(
             )
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 IconButton(onClick = {}) {
-                    Icon(Icons.Default.Sort, "Sort", tint = Purple)
+                    Icon(Icons.AutoMirrored.Filled.Sort, "Sort", tint = Purple)
                 }
             }
         }
@@ -299,7 +300,7 @@ private fun watchlistCard(movie: TmdbMovie, onClick: () -> Unit, onRemove: () ->
                 ) {
                     Icon(Icons.Default.Star, null, tint = Color(0xFFFBBF24), modifier = Modifier.size(12.dp))
                     Text(
-                        "${movie.voteAverage?.let { String.format("%.1f", it) } ?: "N/A"}",
+                        movie.voteAverage?.let { String.format("%.1f", it) } ?: "N/A",
                         color = Color.White,
                         fontSize = 12.sp
                     )

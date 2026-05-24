@@ -386,7 +386,7 @@ private fun searchResultCardPremium(movie: TmdbMovie, onClick: () -> Unit) {
                 ) {
                     Icon(Icons.Default.Star, null, tint = Color(0xFFFBBF24), modifier = Modifier.size(12.dp))
                     Text(
-                        "${movie.voteAverage?.let { String.format("%.1f", it) } ?: "N/A"}",
+                        movie.voteAverage?.let { String.format("%.1f", it) } ?: "N/A",
                         color = Color.White,
                         fontSize = 12.sp
                     )

@@ -48,12 +48,12 @@ fun animePlayerScreen(
     val webViewRef = remember { mutableStateOf<WebView?>(null) }
     val currentUrl = sourceUrls.getOrNull(currentCandidateIndex)?.sourceUrl.orEmpty()
 
-    LaunchedEffect(show._id, episode) {
+    LaunchedEffect(show.uid, episode) {
         isLoading = true
         errorMessage = null
         currentCandidateIndex = 0
         try {
-            val resolved = resolveEpisode(show._id, episode.toString())
+            val resolved = resolveEpisode(show.uid, episode.toString())
                 .sortedByDescending { it.priority ?: 0f }
             sourceUrls = resolved
             if (resolved.isEmpty()) {

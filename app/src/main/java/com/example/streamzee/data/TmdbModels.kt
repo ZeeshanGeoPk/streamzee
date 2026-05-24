@@ -10,17 +10,20 @@ data class TmdbMovieResponse(
 data class TmdbMovie(
     val id: Long,
     val title: String?,
+    val name: String? = null,
     val overview: String?,
     @SerializedName("release_date") val releaseDate: String?,
-    @SerializedName("poster_path") val posterPath: String?,
-    @SerializedName("media_type") val mediaType: String? = "movie",
-    val name: String? = null,
     @SerializedName("first_air_date") val firstAirDate: String? = null,
+    @SerializedName("poster_path") val posterPath: String?,
+    @SerializedName("backdrop_path") val backdropPath: String?, // Added
+    @SerializedName("media_type") val mediaType: String? = "movie",
+    @SerializedName("vote_average") val voteAverage: Double? = null, // Added
+    @SerializedName("genre_ids") val genreIds: List<Int>? = emptyList(), // Added
 ) {
     val displayTitle: String get() = (title ?: name).orEmpty().ifEmpty { "Untitled" }
-    val isAnime: Boolean get() = mediaType?.lowercase() == "anime"
+    val isAnime: Boolean get() = mediaType?.lowercase() == "anime" || genreIds?.contains(16) == true
     val isTv: Boolean get() = mediaType?.lowercase() == "tv"
-    val isMovie: Boolean get() = mediaType?.lowercase() != "tv" && mediaType?.lowercase() != "anime"
+    val isMovie: Boolean get() = !isTv && !isAnime
 }
 
 // AllAnime data models for anime episode resolution
@@ -37,8 +40,10 @@ data class AllAnimeShowsEdges(
 )
 
 data class AllAnimeShow(
-    val _id: String = "",
-    val name: String = ""
+    @SerializedName("uid") val uid: String = "",
+    val name: String = "",
+    val thumbnail: String? = null,
+    @SerializedName("availableEpisodes") val episodeCount: Int? = null
 )
 
 data class AllAnimeEpisodeResponse(

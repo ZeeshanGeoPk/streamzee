@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.streamzee.data.TmdbMovie
 import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.seconds
 
 private const val TMDB_IMAGE_W500 = "https://image.tmdb.org/t/p/w500"
 private const val TMDB_IMAGE_W780 = "https://image.tmdb.org/t/p/w780"
@@ -119,7 +120,7 @@ fun homeScreen(
                 // Auto-scroll
                 LaunchedEffect(pagerState) {
                     while (true) {
-                        delay(4000)
+                        delay(4.seconds)
                         val next = (pagerState.currentPage + 1) % heroMovies.size
                         pagerState.animateScrollToPage(next)
                     }
@@ -183,7 +184,7 @@ fun homeScreen(
                                     ) {
                                         Icon(Icons.Default.Star, null, tint = Color(0xFFFBBF24), modifier = Modifier.size(14.dp))
                                         Text(
-                                            "${movie.voteAverage?.let { String.format("%.1f", it) } ?: "N/A"}",
+                                            movie.voteAverage?.let { String.format("%.1f", it) } ?: "N/A",
                                             color = Color.White,
                                             fontSize = 13.sp
                                         )
@@ -475,7 +476,7 @@ private fun posterCard(movie: TmdbMovie, onClick: () -> Unit) {
         ) {
             Icon(Icons.Default.Star, null, tint = Color(0xFFFBBF24), modifier = Modifier.size(12.dp))
             Text(
-                "${movie.voteAverage?.let { String.format("%.1f", it) } ?: ""}",
+                movie.voteAverage?.let { String.format("%.1f", it) } ?: "",
                 color = TextSecondary,
                 fontSize = 11.sp
             )
@@ -517,7 +518,7 @@ private fun topRatedCard(movie: TmdbMovie, onClick: () -> Unit) {
                 ) {
                     Icon(Icons.Default.Star, null, tint = Color(0xFFFBBF24), modifier = Modifier.size(12.dp))
                     Text(
-                        "${movie.voteAverage?.let { String.format("%.1f", it) } ?: ""}",
+                        movie.voteAverage?.let { String.format("%.1f", it) } ?: "",
                         color = Color.White,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold
