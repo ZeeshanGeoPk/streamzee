@@ -26,6 +26,8 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.streamzee.viewmodel.DownloadItem
 import com.example.streamzee.viewmodel.MainUiState
+import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.seconds
 
 @Composable
 fun downloadsScreen(
@@ -88,7 +90,7 @@ fun downloadsScreen(
                 fontSize = 14.sp
             )
             LaunchedEffect(Unit) {
-                kotlinx.coroutines.delay(2000)
+                kotlinx.coroutines.delay(2.seconds)
                 cachedClearedSuccess = false
             }
         }
@@ -184,7 +186,7 @@ fun downloadsScreen(
                     )
                 }
                 LinearProgressIndicator(
-                    progress = (uiState.storageUsedGb / uiState.storageTotalGb).toFloat(),
+                    progress = { (uiState.storageUsedGb / uiState.storageTotalGb).toFloat() },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(8.dp)
@@ -253,7 +255,7 @@ private fun downloadCard(item: DownloadItem) {
                 "Downloading" -> {
                     val progressRatio = item.downloadedBytes.toFloat() / item.sizeBytes.toFloat()
                     CircularProgressIndicator(
-                        progress = progressRatio,
+                        progress = { progressRatio },
                         color = Color(0xFFA855F7),
                         strokeWidth = 3.dp,
                         modifier = Modifier.fillMaxSize()

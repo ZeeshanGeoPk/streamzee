@@ -16,7 +16,7 @@ import java.net.URL
 class AllAnimeApi(private val httpClient: OkHttpClient) {
     private val baseUrl = "https://api.allanime.day/api"
 
-    private val ALLANIME_HEX_MAP = mapOf(
+    private val allAnimeHexMap = mapOf(
         "79" to "A", "7a" to "B", "7b" to "C", "7c" to "D", "7d" to "E", "7e" to "F", "7f" to "G",
         "70" to "H", "71" to "I", "72" to "J", "73" to "K", "74" to "L", "75" to "M", "76" to "N",
         "77" to "O", "68" to "P", "69" to "Q", "6a" to "R", "6b" to "S", "6c" to "T", "6d" to "U",
@@ -39,7 +39,7 @@ class AllAnimeApi(private val httpClient: OkHttpClient) {
         while (i < str.length) {
             if (i + 2 <= str.length) {
                 val pair = str.substring(i, i + 2)
-                val mapped = ALLANIME_HEX_MAP[pair]
+                val mapped = allAnimeHexMap[pair]
                 if (mapped != null) {
                     sb.append(mapped)
                 } else {
@@ -78,8 +78,8 @@ class AllAnimeApi(private val httpClient: OkHttpClient) {
         }
     }
 
-    suspend fun searchAnime(query: String, limit: Int = 40): List<AllAnimeShow> {
-        return try {
+    suspend fun searchAnime(query: String, limit: Int = 40): List<AllAnimeShow> = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+    try {
             val variables = mapOf(
                 "search" to mapOf(
                     "allowAdult" to true,
@@ -107,9 +107,9 @@ class AllAnimeApi(private val httpClient: OkHttpClient) {
                 .build()
 
             val response = httpClient.newCall(request).execute()
-            if (!response.isSuccessful) return emptyList()
+            if (!response.isSuccessful) return@withContext emptyList()
 
-            val responseBody = response.body?.string() ?: return emptyList()
+            val responseBody = response.body?.string() ?: return@withContext emptyList()
             val gson = com.google.gson.Gson()
             val parsed = gson.fromJson(responseBody, com.google.gson.JsonObject::class.java)
             val edges = parsed?.getAsJsonObject("data")
@@ -136,8 +136,8 @@ class AllAnimeApi(private val httpClient: OkHttpClient) {
         showId: String,
         episodeString: String,
         translationType: String = "sub"
-    ): List<AllAnimeSourceUrl> {
-        return try {
+    ): List<AllAnimeSourceUrl> = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        try {
             val variables = mapOf(
                 "showId" to showId,
                 "translationType" to translationType,
@@ -159,9 +159,9 @@ class AllAnimeApi(private val httpClient: OkHttpClient) {
                 .build()
 
             val response = httpClient.newCall(request).execute()
-            if (!response.isSuccessful) return emptyList()
+            if (!response.isSuccessful) return@withContext emptyList()
 
-            val responseBody = response.body?.string() ?: return emptyList()
+            val responseBody = response.body?.string() ?: return@withContext emptyList()
 
             // 1. Extract raw sourceUrls or tobeparsed encrypted block
             val allSources = mutableListOf<AllAnimeSourceUrl>()
@@ -231,11 +231,11 @@ class AllAnimeApi(private val httpClient: OkHttpClient) {
                 val path = decodeAllanimeUrl(src.sourceUrl.orEmpty()).replace("/clock", "/clock.json")
                 var fetchUrl = path
                 if (fetchUrl.startsWith("//")) {
-                    fetchUrl = "https:" + fetchUrl
+                    fetchUrl = "https:$fetchUrl"
                 } else if (fetchUrl.startsWith("/")) {
-                    fetchUrl = "https://allanime.day" + fetchUrl
+                    fetchUrl = "https://allanime.day$fetchUrl"
                 } else if (!fetchUrl.startsWith("http")) {
-                    fetchUrl = "https://allanime.day/" + fetchUrl
+                    fetchUrl = "https://allanime.day/$fetchUrl"
                 }
 
                 try {
@@ -276,7 +276,7 @@ class AllAnimeApi(private val httpClient: OkHttpClient) {
                                         val l = it.get("link")?.asString.orEmpty()
                                         !l.contains(".m3u8") && !l.contains("master.")
                                     }
-                                    val bestLinks = if (mp4Links.isNotEmpty()) mp4Links else linkList
+                                    val bestLinks = mp4Links.ifEmpty { linkList }
 
                                     val sortedLinks = bestLinks.sortedByDescending {
                                         val resStr = it.get("resolutionStr")?.asString.orEmpty()
@@ -297,24 +297,24 @@ class AllAnimeApi(private val httpClient: OkHttpClient) {
                 } catch (_: Exception) {}
             }
 
-            resolvedList.ifEmpty { allSources } // Fallback to raw if resolution fails entirely
+            return@withContext resolvedList.ifEmpty { allSources } // Fallback to raw if resolution fails entirely
         } catch (e: Exception) {
             emptyList()
         }
     }
 
     companion object {
-        private const val SEARCH_GQL = """
-            query(${'$'}search:SearchInput ${'$'}limit:Int ${'$'}page:Int ${'$'}translationType:VaildTranslationTypeEnumType ${'$'}countryOrigin:VaildCountryOriginEnumType){
-                shows(search:${'$'}search limit:${'$'}limit page:${'$'}page translationType:${'$'}translationType countryOrigin:${'$'}countryOrigin){
+        private const val SEARCH_GQL = $$"""
+            query($search:SearchInput $limit:Int $page:Int $translationType:VaildTranslationTypeEnumType $countryOrigin:VaildCountryOriginEnumType){
+                shows(search:$search limit:$limit page:$page translationType:$translationType countryOrigin:$countryOrigin){
                     edges{_id name availableEpisodes __typename}
                 }
             }
         """
 
-        private const val EPISODE_GQL = """
-            query(${'$'}showId:String! ${'$'}translationType:VaildTranslationTypeEnumType! ${'$'}episodeString:String!){
-                episode(showId:${'$'}showId translationType:${'$'}translationType episodeString:${'$'}episodeString){
+        private const val EPISODE_GQL = $$"""
+            query($showId:String! $translationType:VaildTranslationTypeEnumType! $episodeString:String!){
+                episode(showId:$showId translationType:$translationType episodeString:$episodeString){
                     episodeString sourceUrls tobeparsed
                 }
             }
