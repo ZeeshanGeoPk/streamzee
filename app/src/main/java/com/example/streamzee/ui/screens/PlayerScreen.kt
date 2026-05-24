@@ -1,5 +1,19 @@
 package com.example.streamzee.ui.screens
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.width // Fixes unresolved 'width'
+import androidx.compose.material.icons.Icons // Fixes unresolved 'Icons'
 import android.os.Message
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
@@ -11,7 +25,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -32,6 +45,9 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.example.streamzee.data.PlaybackSource
 import com.example.streamzee.data.TmdbMovie
 import com.example.streamzee.data.playerSources
+
+private val ScreenBg = Color(0xFF050508)
+private val Purple = Color(0xFFA855F7)
 
 @Composable
 fun playerScreen(
@@ -107,36 +123,7 @@ fun playerScreen(
         }
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Text(
-                text = movie.displayTitle,
-                style = MaterialTheme.typography.headlineLarge,
-            )
-            Button(onClick = onBack) {
-                Text("Back")
-            }
-        }
-
-        currentSource.note?.let {
-            Text(
-                text = "Note: $it",
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        ) {
+    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
             AndroidView(
                 factory = { ctx ->
                     WebView(ctx).apply {
@@ -190,22 +177,37 @@ fun playerScreen(
                             }
                         }
                         loadUrl(currentUrl)
-                        webViewRef.value = this
                     }
                 },
-                update = { webView ->
-                    webView.loadUrl(currentUrl)
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(400.dp),
+                    update = { webView -> webView.loadUrl(currentUrl) },
+                    modifier = Modifier.fillMaxSize() // Fill full screen
             )
+            
+                // Cinematic Overlay (Title and Back Button)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .padding(16.dp)
+                .align(Alignment.TopStart),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier.background(Color.Black.copy(0.5f), CircleShape)
+            ) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = Color.White)
+            
+                Spacer(Modifier.width(12.dp))
+                Column {
+                Text(movie.displayTitle, color = Color.White, fontWeight = FontWeight.Bold)
+                    if (isTvPlayback) {
+                    Text("S$tvSeason E$tvEpisode", color = Purple, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+            }
         }
+    }
 
-        Text(
-            text = "The video player is loaded in the web view above.",
-            style = MaterialTheme.typography.bodyMedium,
-        )
     }
 
     DisposableEffect(Unit) {

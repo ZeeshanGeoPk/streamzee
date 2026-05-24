@@ -34,12 +34,14 @@ private const val IMAGE_BASE = "https://image.tmdb.org/t/p/w780"
 @Composable
 fun detailsScreen(
     movie: TmdbMovie,
+    lastSeason: Int? = null,
+    lastEpisode: Int? = null,
     similarMovies: List<TmdbMovie> = emptyList(), // Default value to prevent missing param error
     resumePositionMs: Long?, // Changed to Int? to match your AppState
     isSaved: Boolean,
     onBack: () -> Unit,
     onToggleSave: (String) -> Unit,
-    onPlay: (Int?, Int?) -> Unit, // Corrected signature
+    onPlay: (Int, Int?, Int?, Long) -> Unit, // Corrected signature
     onPlayEpisode: (String) -> Unit = {}, // Added with default
     modifier: Modifier = Modifier
 ) {
@@ -57,6 +59,8 @@ fun detailsScreen(
         item {
             actionButtonsSection(
                 movie = movie,
+                lastSeason = lastSeason,
+                lastEpisode = lastEpisode,
                 resumePositionMs = resumePositionMs ?: 0L, // Handle nullability
                 isSaved = isSaved,
                 onToggleSave = onToggleSave,
@@ -72,8 +76,12 @@ fun detailsScreen(
 
         item { seasonSelector(selectedSeason) { selectedSeason = it } }
 
-        items(5) { index ->
-            episodeItem(index + 1)
+        // Inside LazyColumn items for episodes:
+        items(10) { index -> // Assume 10 episodes for demo
+            episodeItem(
+                num = index + 1,
+                onClick = { onPlay(movie.id.toInt(), selectedSeason, index + 1, 0L) }
+            )
         }
 
         if (similarMovies.isNotEmpty()) {
@@ -119,16 +127,18 @@ private fun heroSection(movie: TmdbMovie, onBack: () -> Unit) {
 @Composable
 private fun actionButtonsSection(
     movie: TmdbMovie,
+    lastSeason: Int? = null,
+    lastEpisode: Int? = null,
     resumePositionMs: Long, // Changed to Long to match your AppState
     isSaved: Boolean,
     onToggleSave: (String) -> Unit,
-    onPlay: (Int?, Int?) -> Unit // Changed to (Int?, Int?)
+    onPlay: (Int, Int?, Int?, Long) -> Unit // Changed to (Int?, Int?)
 ) {
     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             // Play Button
             Button(
-                onClick = { onPlay(movie.id.toInt(), 0) }, // Pass ID as Int, position 0
+                onClick = { onPlay(movie.id.toInt(), lastSeason, lastEpisode, 0L) }, // Pass ID as Int, position 0
                 modifier = Modifier.weight(1f).height(50.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Purple),
                 shape = RoundedCornerShape(8.dp)
@@ -139,7 +149,7 @@ private fun actionButtonsSection(
             
             // Resume Button
             Button(
-                onClick = { onPlay(movie.id.toInt(), resumePositionMs.toInt()) }, // Pass ID and saved Int position
+                onClick = { onPlay(movie.id.toInt(), lastSeason, lastEpisode, resumePositionMs) }, // Pass ID and saved Int position
                 modifier = Modifier.weight(1f).height(50.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = CardBg),
                 shape = RoundedCornerShape(8.dp)
@@ -201,8 +211,14 @@ private fun seasonSelector(selected: Int, onSelect: (Int) -> Unit) {
 }
 
 @Composable
-private fun episodeItem(num: Int) {
-    Row(modifier = Modifier.padding(16.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+private fun episodeItem(num: Int, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() } // Trigger playback
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Text("$num", color = TextSec, modifier = Modifier.width(20.dp))
         Box(modifier = Modifier.size(90.dp, 55.dp).clip(RoundedCornerShape(4.dp)).background(Color.DarkGray))
         Spacer(Modifier.width(12.dp))

@@ -331,6 +331,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         source: PlaybackSource,
         tvSeason: Int? = null,
         tvEpisode: Int? = null,
+        resumePositionMs: Long? = null,
     ) {
         _uiState.update { it.copy(currentScreen = Screen.Player(movie, source, tvSeason, tvEpisode), errorMessage = null) }
     }

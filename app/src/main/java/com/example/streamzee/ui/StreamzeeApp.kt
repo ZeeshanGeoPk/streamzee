@@ -192,7 +192,15 @@ fun streamzeeApp(viewModel: MainViewModel) {
                         isSaved = uiState.savedIds.contains(screen.movie.id.toString()),
                         onBack = viewModel::openHome,
                         onToggleSave = { viewModel.toggleSaved(screen.movie.id.toString()) },
-                        onPlay = { season, episode -> viewModel.openPlayer(screen.movie, playerSources.first(), season, episode) },
+                        onPlay = { _, season, episode, position -> 
+                                    viewModel.openPlayer(
+                                        movie = screen.movie, 
+                                        source = playerSources.first(), 
+                                        tvSeason = season, 
+                                        tvEpisode = episode,
+                                        resumePositionMs = position // Pass the timestamp to the ViewModel
+                                    ) 
+                                },
                         modifier = contentModifier,
                     )
                     is Screen.Player -> playerScreen(
