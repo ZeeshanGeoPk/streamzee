@@ -17,10 +17,12 @@ import okhttp3.Request
 import com.example.streamzee.data.SubtitleItem
 import com.example.streamzee.data.SubtitleSearchResult
 import com.example.streamzee.data.downloadAndExtractFirstSubtitle
+import com.example.streamzee.data.AllAnimeApi
 
 class StreamzeeRepository(
     private val api: TmdbApi,
     private val context: Context,
+    private val allAnimeApi: AllAnimeApi,
 ) {
     fun apiKeyFlow() = AppDataStore.apiKeyFlow(context)
 
@@ -44,6 +46,10 @@ class StreamzeeRepository(
 
     suspend fun searchMovies(apiKey: String, query: String): List<TmdbMovie> {
         return api.searchMovies("Bearer $apiKey", query.trim()).results
+    }
+
+    suspend fun searchTv(apiKey: String, query: String): List<TmdbMovie> {
+        return api.searchTv("Bearer $apiKey", query.trim()).results
     }
 
     suspend fun getMovieDetails(apiKey: String, movieId: String): TmdbMovie {
@@ -203,5 +209,17 @@ class StreamzeeRepository(
 
     suspend fun saveWatchProgress(movieId: String, positionMs: Long) {
         AppDataStore.saveWatchProgress(context, movieId, positionMs)
+    }
+
+    suspend fun searchAnime(query: String): List<com.example.streamzee.data.AllAnimeShow> = withContext(Dispatchers.IO) {
+        allAnimeApi.searchAnime(query)
+    }
+
+    suspend fun resolveAnimeEpisode(
+        showId: String,
+        episodeString: String,
+        translationType: String = "sub"
+    ): List<com.example.streamzee.data.AllAnimeSourceUrl> = withContext(Dispatchers.IO) {
+        allAnimeApi.resolveEpisode(showId, episodeString, translationType)
     }
 }

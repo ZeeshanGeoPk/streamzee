@@ -19,6 +19,14 @@ interface TmdbApi {
         @Query("page") page: Int = 1,
     ): TmdbMovieResponse
 
+    @GET("search/tv")
+    suspend fun searchTv(
+        @Header("Authorization") authorization: String,
+        @Query("query") query: String,
+        @Query("include_adult") includeAdult: Boolean = false,
+        @Query("page") page: Int = 1,
+    ): TmdbMovieResponse
+
     @GET("movie/{movie_id}")
     suspend fun getMovieDetails(
         @Header("Authorization") authorization: String,

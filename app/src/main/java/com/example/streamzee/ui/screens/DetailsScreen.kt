@@ -8,15 +8,22 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.streamzee.data.PlaybackSource
@@ -32,9 +39,19 @@ fun detailsScreen(
     isSaved: Boolean,
     onBack: () -> Unit,
     onToggleSave: () -> Unit,
-    onPlay: () -> Unit,
+    onPlay: (Int?, Int?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var seasonText by remember { mutableStateOf("1") }
+    var episodeText by remember { mutableStateOf("1") }
+
+    val displayDate = movie.releaseDate.orEmpty().ifEmpty { movie.firstAirDate.orEmpty().ifEmpty { "Unknown" } }
+    val playButtonText = if (movie.isTv) {
+        "Play episode"
+    } else {
+        "Play movie"
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -56,7 +73,7 @@ fun detailsScreen(
         }
 
         Text(
-            text = "Release date: ${movie.releaseDate.orEmpty().ifEmpty { "Unknown" }}",
+            text = "Release date: $displayDate",
             style = MaterialTheme.typography.bodyLarge,
         )
 
@@ -94,13 +111,57 @@ fun detailsScreen(
             }
         }
 
+        if (movie.isTv) {
+            Text(
+                text = "TV episode selector",
+                style = MaterialTheme.typography.titleMedium,
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                OutlinedTextField(
+                    value = seasonText,
+                    onValueChange = { seasonText = it.filter { char -> char.isDigit() } },
+                    label = { Text("Season") },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                )
+                OutlinedTextField(
+                    value = episodeText,
+                    onValueChange = { episodeText = it.filter { char -> char.isDigit() } },
+                    label = { Text("Episode") },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                )
+            }
+        }
+
         Text(
-            text = "Play using the best available source",
+            text = if (movie.isTv) {
+                "Stream TV episodes using embed sources. Change season and episode before playback."
+            } else {
+                "Play using the best available source."
+            },
             style = MaterialTheme.typography.titleMedium,
         )
 
-        Button(onClick = onPlay, modifier = Modifier.fillMaxWidth()) {
-            Text("Play")
+        Button(
+            onClick = {
+                val season = seasonText.toIntOrNull()
+                val episode = episodeText.toIntOrNull()
+                if (movie.isTv) {
+                    onPlay(season ?: 1, episode ?: 1)
+                } else {
+                    onPlay(null, null)
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(playButtonText)
         }
     }
 }

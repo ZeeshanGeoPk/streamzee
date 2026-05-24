@@ -40,6 +40,8 @@ fun playerScreen(
     resumePositionMs: Long?,
     onBack: () -> Unit,
     onPlaybackPositionUpdate: (Long) -> Unit,
+    tvSeason: Int? = null,
+    tvEpisode: Int? = null,
     modifier: Modifier = Modifier,
 ) {
     val allPrioritySources = remember { playerSources }
@@ -49,8 +51,17 @@ fun playerScreen(
     var currentSourceIndex by remember { mutableStateOf(startSourceIndex) }
     val currentSource = allPrioritySources[currentSourceIndex]
     var currentCandidateIndex by remember { mutableStateOf(0) }
-    val candidateUrls = currentSource.movieUrlCandidates.ifEmpty { listOf(currentSource.movieUrl) }
-    val currentUrl = candidateUrls[currentCandidateIndex](movie.id.toString())
+    val isTvPlayback = tvSeason != null && tvEpisode != null
+    val candidateUrls = remember(currentSourceIndex, currentCandidateIndex, tvSeason, tvEpisode) {
+        if (isTvPlayback) {
+            currentSource.tvUrlCandidates.ifEmpty { listOf(currentSource.tvUrl) }
+                .map { it(movie.id.toString(), tvSeason, tvEpisode) }
+        } else {
+            currentSource.movieUrlCandidates.ifEmpty { listOf(currentSource.movieUrl) }
+                .map { it(movie.id.toString()) }
+        }
+    }
+    val currentUrl = candidateUrls.getOrNull(currentCandidateIndex).orEmpty()
     val webViewRef = remember { mutableStateOf<WebView?>(null) }
 
     fun shouldBlockUrl(url: String): Boolean {
@@ -75,7 +86,7 @@ fun playerScreen(
     fun tryNextCandidateOrSource(webView: WebView) {
         if (currentCandidateIndex + 1 < candidateUrls.size) {
             currentCandidateIndex += 1
-            val nextUrl = candidateUrls[currentCandidateIndex](movie.id.toString())
+            val nextUrl = candidateUrls[currentCandidateIndex]
             webView.loadUrl(nextUrl)
             return
         }
@@ -83,9 +94,16 @@ fun playerScreen(
             currentSourceIndex += 1
             currentCandidateIndex = 0
             val nextSource = allPrioritySources[currentSourceIndex]
-            val nextCandidates = nextSource.movieUrlCandidates.ifEmpty { listOf(nextSource.movieUrl) }
-            val nextUrl = nextCandidates[0](movie.id.toString())
-            webView.loadUrl(nextUrl)
+            val nextCandidates = if (isTvPlayback) {
+                nextSource.tvUrlCandidates.ifEmpty { listOf(nextSource.tvUrl) }
+                    .map { it(movie.id.toString(), tvSeason, tvEpisode) }
+            } else {
+                nextSource.movieUrlCandidates.ifEmpty { listOf(nextSource.movieUrl) }
+                    .map { it(movie.id.toString()) }
+            }
+            if (nextCandidates.isNotEmpty()) {
+                webView.loadUrl(nextCandidates[0])
+            }
         }
     }
 

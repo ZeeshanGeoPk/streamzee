@@ -1,54 +1,52 @@
 package com.example.streamzee.ui.screens
 
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.streamzee.data.AllAnimeShow
 import com.example.streamzee.data.TmdbMovie
+import com.example.streamzee.viewmodel.SearchMode
 
-private const val TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w300"
+private const val TMDB_IMAGE_W500 = "https://image.tmdb.org/t/p/w500"
+private val Purple = Color(0xFFA855F7)
+private val CardBg = Color(0xFF161622)
+private val TextSec = Color(0xFF8E8E9F)
+private val ScreenBg = Color(0xFF050508)
 
 @Composable
 fun searchScreen(
     query: String,
+    searchMode: SearchMode,
     searchResults: List<TmdbMovie>,
+    animeSearchResults: List<AllAnimeShow>,
     onQueryChange: (String) -> Unit,
     onSearchSubmit: (String) -> Unit,
+    onModeSelected: (SearchMode) -> Unit,
     onMovieClicked: (TmdbMovie) -> Unit,
+    onAnimeClicked: (AllAnimeShow) -> Unit,
     onBack: () -> Unit,
     isSearching: Boolean,
     errorMessage: String?,
@@ -57,132 +55,356 @@ fun searchScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .background(ScreenBg)
     ) {
+        // ── Top bar ──────────────────────────────────────────
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Search Movies",
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.Bold,
+                "Explore",
+                color = Color.White,
+                fontSize = 26.sp,
+                fontWeight = FontWeight.ExtraBold
             )
-            Button(onClick = onBack) {
-                Text("Home")
+            IconButton(onClick = onBack) {
+                Icon(Icons.Default.Close, "Close", tint = Color.White)
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
-        OutlinedTextField(
+        // ── Search Field ─────────────────────────────────────
+        TextField(
             value = query,
             onValueChange = onQueryChange,
-            label = { Text("Search query") },
-            modifier = Modifier.fillMaxWidth(),
+            placeholder = {
+                Text(
+                    "Search movies, TV, anime...",
+                    color = Color(0xFF5A5A6E),
+                    fontSize = 15.sp
+                )
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .clip(RoundedCornerShape(14.dp)),
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = CardBg,
+                unfocusedContainerColor = CardBg,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+                focusedTextColor = Color.White,
+                unfocusedTextColor = Color.White,
+                cursorColor = Purple
+            ),
+            leadingIcon = {
+                Icon(Icons.Default.Search, "Search", tint = TextSec)
+            },
+            trailingIcon = {
+                if (query.isNotBlank()) {
+                    IconButton(onClick = { onQueryChange("") }) {
+                        Icon(Icons.Default.Close, "Clear", tint = TextSec)
+                    }
+                }
+            },
             singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = { onSearchSubmit(query) })
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
-        Button(onClick = { onSearchSubmit(query) }) {
-            Icon(imageVector = Icons.Default.Search, contentDescription = "Search")
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Search")
+        Spacer(Modifier.height(14.dp))
+
+        // ── Category Chips ───────────────────────────────────
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(SearchMode.entries.toList()) { mode ->
+                val isSelected = searchMode == mode
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(
+                            if (isSelected)
+                                Brush.horizontalGradient(listOf(Purple, Color(0xFF6366F1)))
+                            else
+                                Brush.horizontalGradient(listOf(CardBg, CardBg))
+                        )
+                        .clickable { onModeSelected(mode) }
+                        .padding(horizontal = 20.dp, vertical = 10.dp)
+                ) {
+                    Text(
+                        text = when (mode) {
+                            SearchMode.MOVIES -> "🎬 Movies"
+                            SearchMode.TV -> "📺 TV Shows"
+                            SearchMode.ANIME -> "🎌 Anime"
+                        },
+                        color = if (isSelected) Color.White else TextSec,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                        fontSize = 14.sp
+                    )
+                }
+            }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(Modifier.height(14.dp))
+
+        // ── Search button ────────────────────────────────────
+        Button(
+            onClick = { onSearchSubmit(query) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .height(48.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Purple),
+            shape = RoundedCornerShape(14.dp)
+        ) {
+            Icon(Icons.Default.Search, "Search", modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("Search", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        // ── Error ────────────────────────────────────────────
         if (errorMessage != null) {
             Text(
-                text = errorMessage,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodyMedium,
+                errorMessage,
+                color = Color(0xFFEF4444),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                fontSize = 14.sp
             )
-            Spacer(modifier = Modifier.height(12.dp))
         }
+
+        // ── Loading ──────────────────────────────────────────
         if (isSearching) {
-            Text(
-                text = "Searching…",
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            Spacer(modifier = Modifier.height(12.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(32.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = Purple)
+            }
         }
+
+        // ── Results ──────────────────────────────────────────
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(vertical = 8.dp)
         ) {
-            items(searchResults) { movie ->
-                searchResultCard(movie = movie, onClick = { onMovieClicked(movie) })
+            if (searchMode == SearchMode.ANIME) {
+                // Show empty state
+                if (animeSearchResults.isEmpty() && !isSearching && query.isBlank()) {
+                    item {
+                        emptyStateMessage("Search for your favorite anime")
+                    }
+                }
+                items(animeSearchResults) { show ->
+                    animeResultCardPremium(show = show, onClick = { onAnimeClicked(show) })
+                }
+            } else {
+                if (searchResults.isEmpty() && !isSearching && query.isBlank()) {
+                    item {
+                        emptyStateMessage(
+                            when (searchMode) {
+                                SearchMode.MOVIES -> "Discover new movies to watch"
+                                SearchMode.TV -> "Find trending TV shows"
+                                else -> "Search for content"
+                            }
+                        )
+                    }
+                }
+                items(searchResults) { movie ->
+                    searchResultCardPremium(movie = movie, onClick = { onMovieClicked(movie) })
+                }
             }
         }
     }
 }
 
 @Composable
-private fun searchResultCard(movie: TmdbMovie, onClick: () -> Unit) {
-    val expanded = remember { mutableStateOf(false) }
-    val overview = movie.overview.orEmpty().ifEmpty { "No overview available." }
-    val displayOverview = if (expanded.value || overview.length <= 120) {
-        overview
-    } else {
-        overview.take(85).trimEnd()
-    }
-    Card(
+private fun emptyStateMessage(message: String) {
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+            .padding(vertical = 48.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            if (!movie.posterPath.isNullOrBlank()) {
+        Icon(
+            Icons.Default.Search,
+            contentDescription = null,
+            tint = Color(0xFF2C2C3E),
+            modifier = Modifier.size(64.dp)
+        )
+        Spacer(Modifier.height(16.dp))
+        Text(
+            message,
+            color = TextSec,
+            fontSize = 16.sp
+        )
+    }
+}
+
+@Composable
+private fun animeResultCardPremium(show: AllAnimeShow, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(CardBg)
+            .clickable(onClick = onClick)
+            .padding(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Anime thumbnail
+        Box(
+            modifier = Modifier
+                .size(width = 70.dp, height = 100.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color(0xFF2C2C3E)),
+            contentAlignment = Alignment.Center
+        ) {
+            if (!show.thumbnail.isNullOrBlank()) {
                 AsyncImage(
-                    model = TMDB_IMAGE_BASE_URL + movie.posterPath,
-                    contentDescription = movie.displayTitle,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(180.dp),
-                    contentScale = ContentScale.Crop,
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-            Text(
-                text = movie.displayTitle,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = movie.releaseDate.orEmpty().ifEmpty { "Unknown release" },
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            if (!expanded.value && overview.length > 120) {
-                val annotatedOverview = buildAnnotatedString {
-                    append(displayOverview)
-                    append("… ")
-                    pushStringAnnotation(tag = "READ_MORE", annotation = "READ_MORE")
-                    withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary)) {
-                        append("read more")
-                    }
-                    pop()
-                }
-                Text(
-                    text = annotatedOverview,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.clickable { expanded.value = true },
+                    model = show.thumbnail,
+                    contentDescription = show.name,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
                 )
             } else {
-                Text(
-                    text = displayOverview,
-                    style = MaterialTheme.typography.bodyMedium,
+                Icon(
+                    Icons.Default.Movie,
+                    contentDescription = null,
+                    tint = TextSec,
+                    modifier = Modifier.size(32.dp)
                 )
-                if (overview.length > 120) {
-                    TextButton(onClick = { expanded.value = !expanded.value }) {
-                        Text(if (expanded.value) "Show less" else "Read more")
-                    }
+            }
+        }
+
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                show.name,
+                color = Color.White,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(Purple.copy(alpha = 0.2f))
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    Text("ANIME", color = Purple, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                }
+                show.episodeCount?.let {
+                    Text("$it episodes", color = TextSec, fontSize = 12.sp)
                 }
             }
         }
+
+        Icon(
+            Icons.Default.ChevronRight,
+            contentDescription = null,
+            tint = TextSec,
+            modifier = Modifier.size(24.dp)
+        )
+    }
+}
+
+@Composable
+private fun searchResultCardPremium(movie: TmdbMovie, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(CardBg)
+            .clickable(onClick = onClick)
+            .padding(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(width = 70.dp, height = 100.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color(0xFF2C2C3E))
+        ) {
+            if (!movie.posterPath.isNullOrBlank()) {
+                AsyncImage(
+                    model = TMDB_IMAGE_W500 + movie.posterPath,
+                    contentDescription = movie.displayTitle,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            }
+        }
+
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                movie.displayTitle,
+                color = Color.White,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                movie.overview?.take(80)?.plus("…") ?: "No description",
+                color = TextSec,
+                fontSize = 12.sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Rating
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(3.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.Star, null, tint = Color(0xFFFBBF24), modifier = Modifier.size(12.dp))
+                    Text(
+                        "${movie.voteAverage?.let { String.format("%.1f", it) } ?: "N/A"}",
+                        color = Color.White,
+                        fontSize = 12.sp
+                    )
+                }
+                // Year
+                Text(
+                    movie.releaseDate?.take(4) ?: "",
+                    color = TextSec,
+                    fontSize = 12.sp
+                )
+            }
+        }
+
+        Icon(
+            Icons.Default.ChevronRight,
+            contentDescription = null,
+            tint = TextSec,
+            modifier = Modifier.size(24.dp)
+        )
     }
 }
