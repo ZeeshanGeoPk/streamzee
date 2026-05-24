@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.streamzee.data.TmdbMovie
+import com.example.streamzee.data.TmdbEpisode
 
 private val Purple = Color(0xFFA855F7)
 private val DarkBg = Color(0xFF000000)
@@ -34,6 +35,7 @@ private const val IMAGE_BASE = "https://image.tmdb.org/t/p/w780"
 @Composable
 fun detailsScreen(
     movie: TmdbMovie,
+    episodes: List<TmdbEpisode>, // Add this parameter
     lastSeason: Int? = null,
     lastEpisode: Int? = null,
     similarMovies: List<TmdbMovie> = emptyList(), // Default value to prevent missing param error
@@ -43,7 +45,9 @@ fun detailsScreen(
     onToggleSave: (String) -> Unit,
     onPlay: (Int, Int?, Int?, Long) -> Unit, // Corrected signature
     onPlayEpisode: (String) -> Unit = {}, // Added with default
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onSeasonChange: (Long, Int) -> Unit, // Add this
+    onMovieClicked: (TmdbMovie) -> Unit // Ensure this is present
 ) {
     var selectedSeason by remember { mutableStateOf(1) }
     var isExpanded by remember { mutableStateOf(false) }
@@ -73,19 +77,27 @@ fun detailsScreen(
         item {
             descriptionSection(movie.overview, isExpanded) { isExpanded = !isExpanded }
         }
-
-        item { seasonSelector(selectedSeason) { selectedSeason = it } }
-
-        // Inside LazyColumn items for episodes:
-        items(10) { index -> // Assume 10 episodes for demo
-            episodeItem(
-                num = index + 1,
-                onClick = { onPlay(movie.id.toInt(), selectedSeason, index + 1, 0L) }
+        item {
+        seasonSelector(
+        movie = movie,
+        selected = selectedSeason,
+        onSelect = { selectedSeason = it },
+        onSeasonChange = onSeasonChange
             )
         }
 
-        if (similarMovies.isNotEmpty()) {
-            item { recommendationsSection(similarMovies) }
+        items(episodes) { episode -> // Uses the 'episodes' param we added to detailsScreen
+            episodeItem(
+                episode = episode,
+                onClick = { onPlay(movie.id.toInt(), selectedSeason, episode.episodeNumber, 0L) }
+            )
+        }
+
+        item {
+            recommendationsSection(
+                list = similarMovies,
+                onMovieClick = onMovieClicked
+            )
         }
     }
 }
@@ -138,7 +150,11 @@ private fun actionButtonsSection(
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             // Play Button
             Button(
-                onClick = { onPlay(movie.id.toInt(), lastSeason, lastEpisode, 0L) }, // Pass ID as Int, position 0
+                // In the Play button:
+                onClick = { 
+                    if (movie.isTv) onPlay(movie.id.toInt(), 1, 1, 0L) // Start S1 E1
+                    else onPlay(movie.id.toInt(), null, null, 0L) 
+                },
                 modifier = Modifier.weight(1f).height(50.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Purple),
                 shape = RoundedCornerShape(8.dp)
@@ -195,51 +211,81 @@ private fun descriptionSection(overview: String?, isExpanded: Boolean, onToggle:
 }
 
 @Composable
-private fun seasonSelector(selected: Int, onSelect: (Int) -> Unit) {
-    Row(modifier = Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        for (i in 1..3) {
+private fun seasonSelector(
+    movie: TmdbMovie, 
+    selected: Int, 
+    onSelect: (Int) -> Unit, 
+    onSeasonChange: (Long, Int) -> Unit
+) {
+    Row(
+        modifier = Modifier.padding(16.dp).horizontalScroll(rememberScrollState()), 
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        for (i in 1..(movie.numberOfSeasons ?: 1)) {
             val isSelected = selected == i
             Surface(
-                modifier = Modifier.clickable { onSelect(i) },
+                modifier = Modifier.clickable { 
+                    onSelect(i)
+                    onSeasonChange(movie.id, i) 
+                },
                 color = if (isSelected) Purple else CardBg,
                 shape = RoundedCornerShape(8.dp)
             ) {
-                Text("Season $i", color = Color.White, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+                Text(
+                    text = "Season $i", 
+                    color = Color.White, 
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
             }
         }
     }
 }
 
 @Composable
-private fun episodeItem(num: Int, onClick: () -> Unit) {
+private fun episodeItem(episode: TmdbEpisode, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() } // Trigger playback
+            .clickable { onClick() }
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("$num", color = TextSec, modifier = Modifier.width(20.dp))
-        Box(modifier = Modifier.size(90.dp, 55.dp).clip(RoundedCornerShape(4.dp)).background(Color.DarkGray))
+        Text("${episode.episodeNumber}", color = TextSec, modifier = Modifier.width(20.dp))
+        
+        Box(modifier = Modifier.size(100.dp, 60.dp).clip(RoundedCornerShape(8.dp)).background(Color.DarkGray)) {
+            AsyncImage(
+                model = "https://image.tmdb.org/t/p/w500${episode.stillPath}",
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+        
         Spacer(Modifier.width(12.dp))
+        
         Column(modifier = Modifier.weight(1f)) {
-            Text("Episode $num", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-            Text("45 min", color = TextSec, fontSize = 12.sp)
+            Text(episode.name ?: "Episode ${episode.episodeNumber}", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Text("${episode.runtime ?: 45} min", color = TextSec, fontSize = 12.sp)
         }
         Icon(Icons.Default.FileDownload, null, tint = TextSec)
     }
 }
 
 @Composable
-private fun recommendationsSection(list: List<TmdbMovie>) {
+private fun recommendationsSection(list: List<TmdbMovie>, onMovieClick: (TmdbMovie) -> Unit) {
     Column {
         Text("More Like This", color = Color.White, modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold, fontSize = 18.sp)
         LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             items(list) { movie ->
-                Box(modifier = Modifier.size(110.dp, 160.dp).clip(RoundedCornerShape(8.dp))) {
+                Box(
+                    modifier = Modifier
+                        .size(110.dp, 160.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { onMovieClick(movie) } // Navigates to the clicked movie/show
+                ) {
                     AsyncImage(model = IMAGE_BASE + movie.posterPath, contentDescription = null, contentScale = ContentScale.Crop)
                 }
             }
         }
-    }
+    } 
 }

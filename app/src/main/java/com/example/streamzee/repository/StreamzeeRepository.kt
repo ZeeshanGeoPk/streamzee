@@ -4,6 +4,7 @@ import android.content.Context
 import com.example.streamzee.data.AppDataStore
 import com.example.streamzee.data.TmdbApi
 import com.example.streamzee.data.TmdbMovie
+import com.example.streamzee.data.TmdbSeasonResponse
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -62,6 +63,10 @@ class StreamzeeRepository(
     return api.getTvShowDetails("Bearer $apiKey", id)
     }
 
+    suspend fun fetchTvSeason(apiKey: String, tvId: Long, seasonNumber: Int): TmdbSeasonResponse {
+    return api.getTvSeasonDetails("Bearer $apiKey", tvId, seasonNumber)
+    }
+    
     suspend fun fetchSavedMovies(apiKey: String, movieIds: Set<String>): List<TmdbMovie> = coroutineScope {
         movieIds.mapNotNull { id ->
             id.toLongOrNull()?.let { parsed ->

@@ -8,6 +8,7 @@ import com.example.streamzee.data.AllAnimeSourceUrl
 import com.example.streamzee.data.NetworkClient
 import com.example.streamzee.data.PlaybackSource
 import com.example.streamzee.data.TmdbMovie
+import com.example.streamzee.data.TmdbEpisode
 import com.example.streamzee.repository.StreamzeeRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -66,6 +67,7 @@ data class DownloadItem(
 
 data class MainUiState(
     val apiKey: String? = null,
+    val currentSeasonEpisodes: List<TmdbEpisode> = emptyList(),
     val currentScreen: Screen = Screen.Setup,
     val trendingMovies: List<TmdbMovie> = emptyList(),
     val savedIds: Set<String> = emptySet(),
@@ -329,6 +331,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(currentScreen = Screen.AnimeDetails(show), errorMessage = null) }
     }
 
+    fun loadSeason(tvId: Long, seasonNumber: Int) {
+        viewModelScope.launch {
+            try {
+                val apiKey = _uiState.value.apiKey ?: return@launch
+                val response = repository.fetchTvSeason(apiKey, tvId, seasonNumber)
+                _uiState.update { it.copy(currentSeasonEpisodes = response.episodes) }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(errorMessage = e.message) }
+            }
+        }
+    }
+    
     fun openPlayer(
         movie: TmdbMovie,
         source: PlaybackSource,

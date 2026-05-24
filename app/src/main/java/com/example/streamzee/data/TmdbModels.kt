@@ -14,6 +14,7 @@ data class TmdbMovie(
     val overview: String?,
     @SerializedName("release_date") val releaseDate: String?,
     @SerializedName("first_air_date") val firstAirDate: String? = null,
+    @SerializedName("number_of_seasons") val numberOfSeasons: Int? = null,
     @SerializedName("poster_path") val posterPath: String?,
     @SerializedName("backdrop_path") val backdropPath: String?, // Added
     @SerializedName("media_type") val mediaType: String? = "movie",
@@ -29,6 +30,18 @@ data class TmdbMovie(
 
 
 }
+
+data class TmdbSeasonResponse(
+    val episodes: List<TmdbEpisode> = emptyList()
+)
+
+data class TmdbEpisode(
+    @SerializedName("episode_number") val episodeNumber: Int,
+    val name: String? = null,
+    val overview: String? = null,
+    @SerializedName("still_path") val stillPath: String? = null,
+    @SerializedName("runtime") val runtime: Int? = null
+)
 
 // AllAnime data models for anime episode resolution
 data class AllAnimeSearchResponse(

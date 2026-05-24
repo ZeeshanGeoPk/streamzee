@@ -32,6 +32,13 @@ interface TmdbApi {
     @Header("Authorization") authorization: String,
     ): TmdbMovieResponse
 
+    @GET("tv/{tv_id}/season/{season_number}")
+    suspend fun getTvSeasonDetails(
+    @Header("Authorization") authorization: String,
+    @Path("tv_id") tvId: Long,
+    @Path("season_number") seasonNumber: Int
+    ): TmdbSeasonResponse
+    
     @GET("movie/{movie_id}")
     suspend fun getMovieDetails(
         @Header("Authorization") authorization: String,
