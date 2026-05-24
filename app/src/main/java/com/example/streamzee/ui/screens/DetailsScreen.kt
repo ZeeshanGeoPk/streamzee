@@ -77,20 +77,25 @@ fun detailsScreen(
         item {
             descriptionSection(movie.overview, isExpanded) { isExpanded = !isExpanded }
         }
-        item {
-        seasonSelector(
-        movie = movie,
-        selected = selectedSeason,
-        onSelect = { selectedSeason = it },
-        onSeasonChange = onSeasonChange
-            )
-        }
+        
+        // Inside detailsScreen LazyColumn:
 
-        items(episodes) { episode -> // Uses the 'episodes' param we added to detailsScreen
-            episodeItem(
-                episode = episode,
-                onClick = { onPlay(movie.id.toInt(), selectedSeason, episode.episodeNumber, 0L) }
-            )
+        if (movie.isTv) { // Only show for TV shows
+            item {
+                seasonSelector(
+                    movie = movie,
+                    selected = selectedSeason,
+                    onSelect = { selectedSeason = it },
+                    onSeasonChange = onSeasonChange
+                )
+            }
+
+            items(episodes) { episode ->
+                episodeItem(
+                    episode = episode,
+                    onClick = { onPlay(movie.id.toInt(), selectedSeason, episode.episodeNumber, 0L) }
+                )
+            }
         }
 
         item {
@@ -217,11 +222,16 @@ private fun seasonSelector(
     onSelect: (Int) -> Unit, 
     onSeasonChange: (Long, Int) -> Unit
 ) {
+    // Added .horizontalScroll to handle series with 10+ seasons
     Row(
-        modifier = Modifier.padding(16.dp).horizontalScroll(rememberScrollState()), 
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        for (i in 1..(movie.numberOfSeasons ?: 1)) {
+        val totalSeasons = movie.numberOfSeasons ?: 1
+        for (i in 1..totalSeasons) {
             val isSelected = selected == i
             Surface(
                 modifier = Modifier.clickable { 
@@ -234,7 +244,8 @@ private fun seasonSelector(
                 Text(
                     text = "Season $i", 
                     color = Color.White, 
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                 )
             }
         }

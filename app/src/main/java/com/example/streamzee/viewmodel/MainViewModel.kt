@@ -323,8 +323,30 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun openDetails(movie: TmdbMovie) {
-        _uiState.update { it.copy(currentScreen = Screen.Details(movie), errorMessage = null) }
-        loadWatchProgress(movie.id.toString())
+        viewModelScope.launch {
+            val apiKey = _uiState.value.apiKey ?: return@launch
+            _uiState.update { it.copy(isLoading = true) }
+            try {
+                // Fetch FULL details to get 'numberOfSeasons' and 'firstAirDate'
+                val fullMovie = if (movie.isTv) {
+                    repository.getTvShowDetails(apiKey, movie.id.toString())
+                } else {
+                    repository.getMovieDetails(apiKey, movie.id.toString())
+                }
+                
+                _uiState.update { it.copy(
+                    currentScreen = Screen.Details(fullMovie), 
+                    currentSeasonEpisodes = emptyList(),
+                    isLoading = false 
+                )}
+                
+                if (fullMovie.isTv) loadSeason(fullMovie.id, 1)
+                loadWatchProgress(fullMovie.id.toString())
+                
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, errorMessage = e.message) }
+            }
+        }
     }
 
     fun openAnimeDetails(show: AllAnimeShow) {
