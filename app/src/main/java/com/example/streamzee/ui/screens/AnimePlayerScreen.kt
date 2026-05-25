@@ -40,17 +40,17 @@ fun animePlayerScreen(
     val context = LocalContext.current
     val purple = Color(0xFFA855F7)
 
-    // Initialize ExoPlayer
+    // 1. Initialize ExoPlayer with support for HLS and Progressive MP4
     val exoPlayer = remember {
         ExoPlayer.Builder(context).build().apply {
             val mediaItem = MediaItem.fromUri(streamUrl)
             setMediaItem(mediaItem)
             prepare()
-            playWhenReady = true // Auto-play
+            playWhenReady = true // Auto-play on start
         }
     }
 
-    // Clean up player when leaving the screen
+    // 2. Manage Lifecycle: Release player when leaving the screen
     DisposableEffect(Unit) {
         onDispose {
             exoPlayer.release()
@@ -62,16 +62,18 @@ fun animePlayerScreen(
             .fillMaxSize()
             .background(Color.Black)
     ) {
-        // 1. Native Player View
+        // 3. Native Player UI
         AndroidView(
             factory = { ctx ->
                 PlayerView(ctx).apply {
                     player = exoPlayer
-                    useController = true
-                    // Adjust scaling to fit/zoom
-                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                    // Customize the look
+                    useController = true // Shows the native seek bar/controls
                     setBackgroundColor(android.graphics.Color.BLACK)
+                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                    
+                    // Style the controller background to match the app
+                    setShowBuffering(PlayerView.SHOW_BUFFERING_ALWAYS)
+                    
                     layoutParams = FrameLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.MATCH_PARENT
@@ -81,7 +83,7 @@ fun animePlayerScreen(
             modifier = Modifier.fillMaxSize()
         )
 
-        // 2. Cinematic Overlay (Back button and Title)
+        // 4. Cinematic Top Overlay
         Row(
             modifier = Modifier
                 .fillMaxWidth()

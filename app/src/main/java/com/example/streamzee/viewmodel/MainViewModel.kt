@@ -111,7 +111,8 @@ data class MainUiState(
     ),
     val storageUsedGb: Double = 45.6,
     val storageTotalGb: Double = 128.0,
-    val selectedTranslationType: String = "sub" // Added
+    val selectedTranslationType: String = "sub", // Added
+    val animeEpisodes: List<String> = emptyList() // Added
 )
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
@@ -358,25 +359,39 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun playAnime(show: AllAnimeShow, episode: Int) {
-    viewModelScope.launch {
-        _uiState.update { it.copy(isLoading = true) }
-        try {
-            val type = _uiState.value.selectedTranslationType
-            val sources = repository.resolveAnimeEpisode(show.uid, episode.toString(), type)
+        viewModelScope.launch {
+            // 1. Show loading state while resolving
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             
-            // Logic to pick the best direct source
-            val bestUrl = sources.firstOrNull { it.sourceName?.contains("mp4", ignoreCase = true) == true }?.sourceUrl                          ?: sources.firstOrNull()?.sourceUrl
-            
-            if (!bestUrl.isNullOrBlank()) {
-                _uiState.update { it.copy(
-                    isLoading = false,
-                    currentScreen = Screen.AnimePlayer(show, episode, bestUrl, type)
-                )}
-            } else {
-                _uiState.update { it.copy(isLoading = false, errorMessage = "No stream found") }
-            }
-        } catch (e: Exception) {
-            _uiState.update { it.copy(isLoading = false, errorMessage = e.message) }
+            try {
+                val type = _uiState.value.selectedTranslationType
+                
+                // 2. Resolve sources using your repository/API decryption logic
+                val sources = repository.resolveAnimeEpisode(show.uid, episode.toString(), type)
+                
+                // 3. Selection Logic: Prefer "S-mp4", then any "mp4", then first available
+                val bestSource = sources.firstOrNull { it.sourceName?.contains("S-mp4", ignoreCase = true) == true }
+                    ?: sources.firstOrNull { it.sourceName?.contains("mp4", ignoreCase = true) == true }
+                    ?: sources.firstOrNull()
+
+                val streamUrl = bestSource?.sourceUrl
+
+                if (!streamUrl.isNullOrBlank()) {
+                    // 4. Success: Navigate to Native ExoPlayer screen
+                    _uiState.update { it.copy(
+                        isLoading = false,
+                        currentScreen = Screen.AnimePlayer(
+                            show = show,
+                            episode = episode,
+                            streamUrl = streamUrl,
+                            translationType = type
+                        )
+                    )}
+                } else {
+                    _uiState.update { it.copy(isLoading = false, errorMessage = "No playable sources found.") }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, errorMessage = "Resolution Error: ${e.message}") }
             }
         }
     }
@@ -404,12 +419,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(currentScreen = Screen.Player(movie, source, tvSeason, tvEpisode, resumePositionMs), errorMessage = null) }
     }
 
-    fun openAnimePlayer(show: AllAnimeShow, episode: Int, translationType: String = "sub") {
-        _uiState.update { it.copy(currentScreen = Screen.AnimePlayer(show, episode, translationType), errorMessage = null) }
-    }
-
     suspend fun resolveAnimeEpisode(showId: String, episodeString: String): List<AllAnimeSourceUrl> {
         return repository.resolveAnimeEpisode(showId, episodeString)
+    }
+    
+    fun updateAnimeTranslation(type: String) {
+    _uiState.update { it.copy(selectedTranslationType = type) }
     }
 
     fun toggleSaved(movieId: String) {

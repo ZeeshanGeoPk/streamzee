@@ -231,15 +231,19 @@ fun streamzeeApp(viewModel: MainViewModel) {
                     )
                     is Screen.AnimeDetails -> animeDetailsScreen(
                         show = screen.show,
-                        onBack = viewModel::openSearch,
-                        onPlayEpisode = { episode -> viewModel.openAnimePlayer(screen.show, episode) },
-                        modifier = contentModifier,
+                        episodes = uiState.animeEpisodes,
+                        selectedTranslation = uiState.selectedTranslationType,
+                        onTranslationChange = { viewModel.updateAnimeTranslation(it) },
+                        onBack = { viewModel.openSearch() },
+                        onPlayEpisode = { epNum -> viewModel.playAnime(screen.show, epNum) },
+                        modifier = contentModifier
                     )
+                    
                     is Screen.AnimePlayer -> animePlayerScreen(
                         show = screen.show,
                         episode = screen.episode,
+                        streamUrl = screen.streamUrl, // Add this
                         onBack = { viewModel.openAnimeDetails(screen.show) },
-                        resolveEpisode = viewModel::resolveAnimeEpisode,
                         modifier = contentModifier,
                     )
                 }
