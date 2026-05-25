@@ -139,6 +139,7 @@ private fun heroSection(movie: TmdbMovie, onBack: () -> Unit) {
         }
     }
 }
+
 @Composable
 private fun actionButtonsSection(
     movie: TmdbMovie,
@@ -149,13 +150,25 @@ private fun actionButtonsSection(
     onToggleSave: (String) -> Unit,
     onPlay: (Int, Int?, Int?, Long) -> Unit
 ) {
-    val hasProgress = resumePositionMs > 0
+
+    val hasProgress = if (movie.isTv) {
+        // Show resume if we have watched past S1 E1 OR we have time progress
+        lastSeason != null && (lastSeason > 1 || lastEpisode!! > 1 || resumePositionMs > 1000)
+    } else {
+        // For movies, only show if we have time progress
+        resumePositionMs > 1000
+    } 
 
     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            // Play Button (Always starts from beginning)
+            
+            // --- PLAY BUTTON ---
+            // Forces playback to start from the beginning (0ms)
             Button(
-                onClick = { onPlay(movie.id.toInt(), 1, 1, 0L) }, 
+                onClick = { 
+                    if (movie.isTv) onPlay(movie.id.toInt(), 1, 1, 0L) 
+                    else onPlay(movie.id.toInt(), null, null, 0L) 
+                }, 
                 modifier = Modifier.weight(1f).height(50.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Purple),
                 shape = RoundedCornerShape(8.dp)
@@ -164,10 +177,13 @@ private fun actionButtonsSection(
                 Text(" Play", fontWeight = FontWeight.Bold)
             }
 
-            // Generic Resume Button
-            if (hasProgress) {
+            // --- RESUME BUTTON ---
+            // Only visible if there is saved progress
+            if (hasProgress) { // Change to hasProgress if you want to conditionally show/hide the Resume button
                 Button(
-                    onClick = { onPlay(movie.id.toInt(), lastSeason, lastEpisode, resumePositionMs) },
+                    onClick = { 
+                        onPlay(movie.id.toInt(), lastSeason, lastEpisode, resumePositionMs) 
+                    },
                     modifier = Modifier.weight(1f).height(50.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = CardBg),
                     shape = RoundedCornerShape(8.dp)
@@ -184,6 +200,7 @@ private fun actionButtonsSection(
             }
         }
 
+        // --- WATCHLIST BUTTON ---
         OutlinedButton(
             onClick = { onToggleSave(movie.id.toString()) },
             modifier = Modifier.fillMaxWidth().height(50.dp),

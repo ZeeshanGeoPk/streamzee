@@ -177,14 +177,30 @@ fun playerScreen(
                 while (true) {
                     kotlinx.coroutines.delay(5.seconds) // Poll every 5 seconds
                     webViewRef.value?.evaluateJavascript(
-                        "(function() { return document.querySelector('video') ? document.querySelector('video').currentTime : 0; })();"
-                    ) { result ->
-                        // result comes back as a string, e.g., "120.5". Convert to Milliseconds.
-                        val seconds = result.toDoubleOrNull() ?: 0.0
-                        if (seconds > 0) {
-                            lastKnownPosition = (seconds * 1000).toLong()
+                            """
+                            (function() {
+                                var v = document.querySelector('video');
+                                if (v) return v.currentTime;
+                                
+                                // Try searching inside iframes (might be blocked, but worth a shot)
+                                var iframes = document.getElementsByTagName('iframe');
+                                for (var i = 0; i < iframes.length; i++) {
+                                    try {
+                                        var iv = iframes[i].contentWindow.document.querySelector('video');
+                                        if (iv) return iv.currentTime;
+                                    } catch(e) {}
+                                }
+                                return 0;
+                            })();
+                            """.trimIndent()
+                        ) { result ->
+                            // The result often comes wrapped in quotes like "120.5"
+                            val cleanedResult = result.replace("\"", "")
+                            val seconds = cleanedResult.toDoubleOrNull() ?: 0.0
+                            if (seconds > 0) {
+                                lastKnownPosition = (seconds * 1000).toLong()
+                            }
                         }
-                    }
                 }
             }
         

@@ -216,6 +216,8 @@ fun streamzeeApp(viewModel: MainViewModel) {
                         resumePositionMs = uiState.currentMovieWatchProgressMs,
                         onBack = { viewModel.openDetails(screen.movie) },
                         onPlaybackPositionUpdate = { pos, s, e -> 
+                            // If the movie is a TV show, we ALWAYS save the season/episode 
+                            // even if the timestamp (pos) is 0.
                             viewModel.savePlaybackProgress(
                                 movieId = screen.movie.id.toString(), 
                                 positionMs = pos, 
