@@ -44,6 +44,7 @@ sealed interface Screen {
     data class AnimePlayer(
         val show: AllAnimeShow,
         val episode: Int,
+        val streamUrl: String, // The resolved direct link
         val translationType: String = "sub",
     ) : Screen
     object Setup : Screen
@@ -109,7 +110,8 @@ data class MainUiState(
         DownloadItem("dl_6", "Breaking Bad", "S1 E1", 120_000_000L, 120_000_000L, "Failed", "https://image.tmdb.org/t/p/w300/ggFHwq43upj6H1jOb5870YjOE1Z.jpg")
     ),
     val storageUsedGb: Double = 45.6,
-    val storageTotalGb: Double = 128.0
+    val storageTotalGb: Double = 128.0,
+    val selectedTranslationType: String = "sub" // Added
 )
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
@@ -355,6 +357,31 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(currentScreen = Screen.AnimeDetails(show), errorMessage = null) }
     }
 
+    fun playAnime(show: AllAnimeShow, episode: Int) {
+    viewModelScope.launch {
+        _uiState.update { it.copy(isLoading = true) }
+        try {
+            val type = _uiState.value.selectedTranslationType
+            val sources = repository.resolveAnimeEpisode(show.uid, episode.toString(), type)
+            
+            // Logic to pick the best direct source
+            val bestUrl = sources.firstOrNull { it.sourceName?.contains("mp4", ignoreCase = true) == true }?.sourceUrl                          ?: sources.firstOrNull()?.sourceUrl
+            
+            if (!bestUrl.isNullOrBlank()) {
+                _uiState.update { it.copy(
+                    isLoading = false,
+                    currentScreen = Screen.AnimePlayer(show, episode, bestUrl, type)
+                )}
+            } else {
+                _uiState.update { it.copy(isLoading = false, errorMessage = "No stream found") }
+            }
+        } catch (e: Exception) {
+            _uiState.update { it.copy(isLoading = false, errorMessage = e.message) }
+            }
+        }
+    }
+    
+    
     fun loadSeason(tvId: Long, seasonNumber: Int) {
         viewModelScope.launch {
             try {
