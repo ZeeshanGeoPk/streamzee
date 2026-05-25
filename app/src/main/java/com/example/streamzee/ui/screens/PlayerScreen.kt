@@ -39,6 +39,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect // Added for JS polling
+import androidx.compose.runtime.mutableLongStateOf
+import kotlin.time.Duration.Companion.seconds
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -55,7 +58,7 @@ fun playerScreen(
     source: PlaybackSource,
     resumePositionMs: Long?,
     onBack: () -> Unit,
-    onPlaybackPositionUpdate: (Long) -> Unit,
+    onPlaybackPositionUpdate: (Long, Int?, Int?) -> Unit,
     tvSeason: Int? = null,
     tvEpisode: Int? = null,
     modifier: Modifier = Modifier,
@@ -64,6 +67,9 @@ fun playerScreen(
     val startSourceIndex = remember(source) {
         allPrioritySources.indexOfFirst { it.id == source.id }.takeIf { it >= 0 } ?: 0
     }
+    // Initialize with the resume position passed from previous screen
+    var lastKnownPosition by remember { mutableLongStateOf(resumePositionMs ?: 0L) }
+    
     var currentSourceIndex by remember { mutableStateOf(startSourceIndex) }
     val currentSource = allPrioritySources[currentSourceIndex]
     var currentCandidateIndex by remember { mutableStateOf(0) }
@@ -82,19 +88,61 @@ fun playerScreen(
 
     fun shouldBlockUrl(url: String): Boolean {
         val blockedPatterns = listOf(
-            "doubleclick.net",
-            "googlesyndication.com",
-            "pagead2.googlesyndication.com",
-            "adservice.google.com",
-            "amazon-adsystem.com",
-            "adsystem.com",
             "google-analytics.com",
-            "facebook.net",
-            "tracker",
-            "analytics",
+            "googletagmanager.com",
+            "googletagservices.com",
+            "doubleclick.net",
+            "adservice.google",
+            "pagead2.googlesyndication.com",
+            "stats.g.doubleclick.net",
+            "yt3.ggpht.com/ytc",
+            "fonts.googleapis.com",
+            "fonts.gstatic.com",
+            "googleapis.com",
+            "gstatic.com",
+            "cdn.adx1.com",
+            "intelligenceadx.com",
+            "adsco.re",
+            "mc.yandex",
+            "bvtpk.com",
+            "my.rtmark.net",
+            "b7510.com",
+            "gt.unbrownunflat.com",
+            "im.malocacomals.com",
+            "users.videasy.net",
+            "nf.sixmossin.com",
+            "realizationnewestfangs.com",
+            "acscdn.com",
+            "lt.taloseempest.com",
+            "profitableratecpm.com",
+            "preferencenail.com",
+            "protrafficinspector.com",
+            "s10.histats.com",
+            "weirdopt.com",
+            "cloudflareinsights.com",
+            "kettledroopingcontinuation.com",
+            "wayfarerorthodox.com",
+            "woxaglasuy.net",
+            "adeptspiritual.com",
+            "calculating-laugh.com",
+            "amavhxdlofklxjg.xyz",
+            "u3qleufcm6vure326ktfpbj.cfd",
+            "get64t9vqg8pnbex1y463o.rest",
+            "usrpubtrk.com",
+            "adexchangeclear.com",
+            "rzjzjnavztycv.online",
+            "cloudnestra.com",
+            "neonhorizonworkshops.com",
             "popads",
             "popunder",
             "adclick",
+            "googlesyndication.com",
+            "amazon-adsystem.com",
+            "adsystem.com",
+            "facebook.net",
+            "tracker",
+            "analytics",
+            "popunder"
         )
         return blockedPatterns.any { url.contains(it, ignoreCase = true) }
     }
@@ -124,7 +172,23 @@ fun playerScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-            AndroidView(
+            
+            LaunchedEffect(webViewRef.value) {
+                while (true) {
+                    kotlinx.coroutines.delay(5.seconds) // Poll every 5 seconds
+                    webViewRef.value?.evaluateJavascript(
+                        "(function() { return document.querySelector('video') ? document.querySelector('video').currentTime : 0; })();"
+                    ) { result ->
+                        // result comes back as a string, e.g., "120.5". Convert to Milliseconds.
+                        val seconds = result.toDoubleOrNull() ?: 0.0
+                        if (seconds > 0) {
+                            lastKnownPosition = (seconds * 1000).toLong()
+                        }
+                    }
+                }
+            }
+        
+        AndroidView(
                 factory = { ctx ->
                     WebView(ctx).apply {
                         settings.apply {
@@ -210,10 +274,21 @@ fun playerScreen(
 
     }
 
-    DisposableEffect(Unit) {
-        onDispose {
-            webViewRef.value?.destroy()
-            onPlaybackPositionUpdate(0L)
-        }
-    }
+        DisposableEffect(Unit) {
+                onDispose {
+                    // Get the current webView from the ref
+                    val webView = webViewRef.value
+                    
+                    // 1. Save the actual tracked position (lastKnownPosition)
+                    // If the JS polling worked, this will be the current second.
+                    // If it failed, it will be the initial resumePositionMs.
+                    onPlaybackPositionUpdate(lastKnownPosition, tvSeason, tvEpisode)
+                    
+                    // 2. Clean up memory
+                    webView?.stopLoading()
+                    webView?.loadUrl("about:blank")
+                    webView?.destroy()
+                    webViewRef.value = null
+                }
+            }
 }

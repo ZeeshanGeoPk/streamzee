@@ -72,8 +72,6 @@ fun detailsScreen(
             )
         }
 
-        item { continueWatchingSection() }
-
         item {
             descriptionSection(movie.overview, isExpanded) { isExpanded = !isExpanded }
         }
@@ -144,22 +142,20 @@ private fun heroSection(movie: TmdbMovie, onBack: () -> Unit) {
 @Composable
 private fun actionButtonsSection(
     movie: TmdbMovie,
-    lastSeason: Int? = null,
-    lastEpisode: Int? = null,
-    resumePositionMs: Long, // Changed to Long to match your AppState
+    resumePositionMs: Long,
+    lastSeason: Int?,
+    lastEpisode: Int?,
     isSaved: Boolean,
     onToggleSave: (String) -> Unit,
-    onPlay: (Int, Int?, Int?, Long) -> Unit // Changed to (Int?, Int?)
+    onPlay: (Int, Int?, Int?, Long) -> Unit
 ) {
+    val hasProgress = resumePositionMs > 0
+
     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            // Play Button
+            // Play Button (Always starts from beginning)
             Button(
-                // In the Play button:
-                onClick = { 
-                    if (movie.isTv) onPlay(movie.id.toInt(), 1, 1, 0L) // Start S1 E1
-                    else onPlay(movie.id.toInt(), null, null, 0L) 
-                },
+                onClick = { onPlay(movie.id.toInt(), 1, 1, 0L) }, 
                 modifier = Modifier.weight(1f).height(50.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Purple),
                 shape = RoundedCornerShape(8.dp)
@@ -167,20 +163,27 @@ private fun actionButtonsSection(
                 Icon(Icons.Default.PlayArrow, null)
                 Text(" Play", fontWeight = FontWeight.Bold)
             }
-            
-            // Resume Button
-            Button(
-                onClick = { onPlay(movie.id.toInt(), lastSeason, lastEpisode, resumePositionMs) }, // Pass ID and saved Int position
-                modifier = Modifier.weight(1f).height(50.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = CardBg),
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Resume", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    Text("S2 E5", fontSize = 10.sp, color = TextSec)
+
+            // Generic Resume Button
+            if (hasProgress) {
+                Button(
+                    onClick = { onPlay(movie.id.toInt(), lastSeason, lastEpisode, resumePositionMs) },
+                    modifier = Modifier.weight(1f).height(50.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = CardBg),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Resume", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = if (movie.isTv) "S$lastSeason E$lastEpisode" else formatMillis(resumePositionMs),
+                            fontSize = 10.sp, 
+                            color = TextSec
+                        )
+                    }
                 }
             }
         }
+
         OutlinedButton(
             onClick = { onToggleSave(movie.id.toString()) },
             modifier = Modifier.fillMaxWidth().height(50.dp),
@@ -189,20 +192,6 @@ private fun actionButtonsSection(
         ) {
             Icon(if (isSaved) Icons.Default.Check else Icons.Default.Add, null, tint = if (isSaved) Purple else Color.White)
             Text(if (isSaved) " Saved to Watchlist" else " Add to Watchlist", color = Color.White)
-        }
-    }
-}
-
-@Composable
-private fun continueWatchingSection() {
-    Card(modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = CardBg)) {
-        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(modifier = Modifier.size(80.dp, 45.dp).clip(RoundedCornerShape(4.dp)).background(Color.DarkGray))
-            Spacer(Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text("Continue S2 E5", color = Purple, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                LinearProgressIndicator(progress = { 0.6f }, modifier = Modifier.fillMaxWidth().height(4.dp), color = Purple, trackColor = Color.Black)
-            }
         }
     }
 }
@@ -299,4 +288,16 @@ private fun recommendationsSection(list: List<TmdbMovie>, onMovieClick: (TmdbMov
             }
         }
     } 
+}
+
+private fun formatMillis(ms: Long): String {
+    val totalSeconds = ms / 1000
+    val hours = totalSeconds / 3600
+    val minutes = (totalSeconds % 3600) / 60
+    val seconds = totalSeconds % 60
+    return if (hours > 0) {
+        String.format("%02d:%02d:%02d", hours, minutes, seconds)
+    } else {
+        String.format("%02d:%02d", minutes, seconds)
+    }
 }

@@ -189,6 +189,8 @@ fun streamzeeApp(viewModel: MainViewModel) {
                     is Screen.Details -> detailsScreen(
                         movie = screen.movie,
                         episodes = uiState.currentSeasonEpisodes,
+                        lastSeason = uiState.lastWatchedSeason ?: 1,
+                        lastEpisode = uiState.lastWatchedEpisode ?: 1,
                         similarMovies = uiState.trendingMovies,
                         resumePositionMs = uiState.currentMovieWatchProgressMs,
                         isSaved = uiState.savedIds.contains(screen.movie.id.toString()),
@@ -213,8 +215,13 @@ fun streamzeeApp(viewModel: MainViewModel) {
                         source = screen.source,
                         resumePositionMs = uiState.currentMovieWatchProgressMs,
                         onBack = { viewModel.openDetails(screen.movie) },
-                        onPlaybackPositionUpdate = { positionMs ->
-                            viewModel.savePlaybackProgress(screen.movie.id.toString(), positionMs)
+                        onPlaybackPositionUpdate = { pos, s, e -> 
+                            viewModel.savePlaybackProgress(
+                                movieId = screen.movie.id.toString(), 
+                                positionMs = pos, 
+                                season = s, 
+                                episode = e
+                            ) 
                         },
                         tvSeason = screen.tvSeason,
                         tvEpisode = screen.tvEpisode,

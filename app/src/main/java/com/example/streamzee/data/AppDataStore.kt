@@ -18,7 +18,28 @@ object AppDataStore {
     private val SAVED_IDS = stringSetPreferencesKey("saved_media_ids")
 
     private fun watchProgressKey(movieId: String) = stringPreferencesKey("watch_progress_$movieId")
+    private fun lastSeasonKey(movieId: String) = stringPreferencesKey("last_season_$movieId")
+    private fun lastEpisodeKey(movieId: String) = stringPreferencesKey("last_episode_$movieId")
 
+    // Update watchProgressFlow to return a Triple (Position, Season, Episode)
+    fun watchHistoryFlow(context: Context, movieId: String): Flow<Triple<Long, Int, Int>> =
+        context.dataStore.data.map { preferences ->
+            val pos = preferences[watchProgressKey(movieId)]?.toLongOrNull() ?: 0L
+            val season = preferences[lastSeasonKey(movieId)]?.toIntOrNull() ?: 1
+            val episode = preferences[lastEpisodeKey(movieId)]?.toIntOrNull() ?: 1
+            Triple(pos, season, episode)
+        }
+
+    // Update save function to include Season and Episode
+    suspend fun saveWatchProgress(context: Context, movieId: String, positionMs: Long, season: Int? = null, episode: Int? = null) {
+        context.dataStore.edit { preferences ->
+            preferences[watchProgressKey(movieId)] = positionMs.toString()
+            season?.let { preferences[lastSeasonKey(movieId)] = it.toString() }
+            episode?.let { preferences[lastEpisodeKey(movieId)] = it.toString() }
+        }
+    }
+    
+    
     fun apiKeyFlow(context: Context): Flow<String?> =
         context.dataStore.data.map { preferences: Preferences -> preferences[TMDB_API_KEY] }
 
@@ -41,10 +62,4 @@ object AppDataStore {
         context.dataStore.data.map { preferences: Preferences ->
             preferences[watchProgressKey(movieId)]?.toLongOrNull() ?: 0L
         }
-
-    suspend fun saveWatchProgress(context: Context, movieId: String, positionMs: Long) {
-        context.dataStore.edit { preferences: MutablePreferences ->
-            preferences[watchProgressKey(movieId)] = positionMs.toString()
-        }
-    }
 }

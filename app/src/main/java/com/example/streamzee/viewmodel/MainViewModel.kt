@@ -67,6 +67,8 @@ data class DownloadItem(
 
 data class MainUiState(
     val apiKey: String? = null,
+    val lastWatchedSeason: Int? = null,
+    val lastWatchedEpisode: Int? = null,
     val currentSeasonEpisodes: List<TmdbEpisode> = emptyList(),
     val currentScreen: Screen = Screen.Setup,
     val trendingMovies: List<TmdbMovie> = emptyList(),
@@ -447,15 +449,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun loadWatchProgress(movieId: String) {
         viewModelScope.launch {
-            val positionMs = repository.watchProgressFlow(movieId).first()
-            _uiState.update { state -> state.copy(currentMovieWatchProgressMs = positionMs.takeIf { v -> v > 0 }) }
+            // Collect the Triple (Position, Season, Episode)
+            repository.watchProgressFlow(movieId).collectLatest { (pos, season, episode) ->
+                _uiState.update { state ->
+                    state.copy(
+                        currentMovieWatchProgressMs = pos,
+                        lastWatchedSeason = season,
+                        lastWatchedEpisode = episode
+                    )
+                }
+            }
         }
     }
 
-    fun savePlaybackProgress(movieId: String, positionMs: Long) {
+    // This is called from the PlayerScreen when the user leaves
+    fun savePlaybackProgress(movieId: String, positionMs: Long, season: Int? = null, episode: Int? = null) {
         viewModelScope.launch {
-            repository.saveWatchProgress(movieId, positionMs)
-            _uiState.update { state -> state.copy(currentMovieWatchProgressMs = positionMs.takeIf { v -> v > 0 }) }
+            repository.saveWatchProgress(movieId, positionMs, season, episode)
         }
     }
 

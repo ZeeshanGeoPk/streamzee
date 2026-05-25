@@ -225,11 +225,11 @@ class StreamzeeRepository(
         }
     }
 
-    fun watchProgressFlow(movieId: String): Flow<Long> =
-        AppDataStore.watchProgressFlow(context, movieId)
+    fun watchProgressFlow(movieId: String): Flow<Triple<Long, Int, Int>> =
+        AppDataStore.watchHistoryFlow(context, movieId)
 
-    suspend fun saveWatchProgress(movieId: String, positionMs: Long) {
-        AppDataStore.saveWatchProgress(context, movieId, positionMs)
+    suspend fun saveWatchProgress(movieId: String, positionMs: Long, season: Int? = null, episode: Int? = null) {
+        AppDataStore.saveWatchProgress(context, movieId, positionMs, season, episode)
     }
 
     suspend fun searchAnime(query: String): List<com.example.streamzee.data.AllAnimeShow> = withContext(Dispatchers.IO) {
