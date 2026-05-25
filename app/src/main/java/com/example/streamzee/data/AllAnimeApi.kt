@@ -116,17 +116,22 @@ class AllAnimeApi(private val httpClient: OkHttpClient) {
                 ?.getAsJsonObject("shows")
                 ?.getAsJsonArray("edges")
 
-            edges?.mapNotNull { el ->
-                try {
-                    val obj = el.asJsonObject
-                    AllAnimeShow(
-                        uid = obj.get("_id").asString,
-                        name = obj.get("name").asString
-                    )
-                } catch (_: Exception) {
-                    null
-                }
-            } ?: emptyList()
+                // 2. Update the mapping logic inside searchAnime function:
+                edges?.mapNotNull { el ->
+                    try {
+                        val obj = el.asJsonObject
+                        AllAnimeShow(
+                            aid = obj.get("_id").asString,
+                            name = obj.get("name").asString,
+                            thumbnail = obj.get("thumbnail")?.asString, // Map this
+                            episodeCount = if (obj.has("availableEpisodes")) {
+                                val avail = obj.getAsJsonObject("availableEpisodes")
+                                // Get count based on sub/dub - usually 'sub' is safest default
+                                avail.get("sub")?.asInt ?: avail.get("dub")?.asInt ?: 0
+                            } else 0
+                        )
+                    } catch (_: Exception) { null }
+                } ?: emptyList()
         } catch (e: Exception) {
             emptyList()
         }
@@ -304,10 +309,17 @@ class AllAnimeApi(private val httpClient: OkHttpClient) {
     }
 
     companion object {
+        // 1. Update the Query string to include thumbnail and availableEpisodes
         private const val SEARCH_GQL = $$"""
             query($search:SearchInput $limit:Int $page:Int $translationType:VaildTranslationTypeEnumType $countryOrigin:VaildCountryOriginEnumType){
                 shows(search:$search limit:$limit page:$page translationType:$translationType countryOrigin:$countryOrigin){
-                    edges{_id name availableEpisodes __typename}
+                    edges{
+                        _id 
+                        name 
+                        thumbnail 
+                        availableEpisodes 
+                        __typename
+                    }
                 }
             }
         """

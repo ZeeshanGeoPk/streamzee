@@ -355,7 +355,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun openAnimeDetails(show: AllAnimeShow) {
-        _uiState.update { it.copy(currentScreen = Screen.AnimeDetails(show), errorMessage = null) }
+        val totalEpisodes = show.episodeCount ?: 0
+        
+        // Generate the list of strings for the grid (e.g., "1", "2", "3"...)
+        val episodeList = (1..totalEpisodes).map { it.toString() }
+        
+        _uiState.update { it.copy(
+            currentScreen = Screen.AnimeDetails(show),
+            animeEpisodes = episodeList, // This fills the grid
+            errorMessage = null
+        ) }
     }
 
     fun playAnime(show: AllAnimeShow, episode: Int) {
@@ -367,7 +376,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val type = _uiState.value.selectedTranslationType
                 
                 // 2. Resolve sources using your repository/API decryption logic
-                val sources = repository.resolveAnimeEpisode(show.uid, episode.toString(), type)
+                val sources = repository.resolveAnimeEpisode(show.aid, episode.toString(), type)
                 
                 // 3. Selection Logic: Prefer "S-mp4", then any "mp4", then first available
                 val bestSource = sources.firstOrNull { it.sourceName?.contains("S-mp4", ignoreCase = true) == true }

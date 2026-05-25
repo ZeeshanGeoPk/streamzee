@@ -57,7 +57,7 @@ data class AllAnimeShowsEdges(
 )
 
 data class AllAnimeShow(
-    @SerializedName("uid") val uid: String = "",
+    @SerializedName("_id") val aid: String = "",
     val name: String = "",
     val thumbnail: String? = null,
     @SerializedName("availableEpisodes") val episodeCount: Int? = null
