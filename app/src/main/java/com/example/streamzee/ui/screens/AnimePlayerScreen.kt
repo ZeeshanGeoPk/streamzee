@@ -1,5 +1,7 @@
 package com.example.streamzee.ui.screens
 
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.PermissionRequest
@@ -83,12 +85,35 @@ fun animePlayerScreen(
                     }
 
                     webViewClient = object : WebViewClient() {
-                        override fun onReceivedSslError(
-                            view: WebView?,
-                            handler: SslErrorHandler?,
-                            error: android.net.http.SslError?
-                        ) {
-                            handler?.proceed() 
+                        // FIX 1: This stops the page from redirecting to an ad URL
+                        override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                            val newUrl = request?.url?.toString() ?: return false
+                            
+                            // Allow the player domain and internal data/blobs
+                            if (newUrl.contains("megaplay.buzz") || newUrl.startsWith("data:") || newUrl.startsWith("blob:")) {
+                                return false // Let it load
+                            }
+                            
+                            // Block any other navigation (this is the ad redirect)
+                            return true 
+                        }
+
+                        override fun onReceivedSslError(view: WebView?, handler: SslErrorHandler?, error: android.net.http.SslError?) {
+                            handler?.proceed()
+                        }
+
+                        // FIX 2: Block ad scripts from loading in the background
+                        override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
+                            val url = request?.url?.toString() ?: return null
+                            val adDomains = listOf(
+                                "popads", "popunder", "adclick", "doubleclick", "googlesyndication",
+                                "mobicow", "adservice", "analytics", "asacdn", "clksite", "adx1",
+                                "nf.sixmossin.com", "realizationnewestfangs", "kettledroopingcontinuation"
+                            )
+                            if (adDomains.any { url.contains(it, ignoreCase = true) }) {
+                                return WebResourceResponse("text/plain", "utf-8", null)
+                            }
+                            return super.shouldInterceptRequest(view, request)
                         }
                     }
                     
@@ -119,6 +144,8 @@ fun animePlayerScreen(
                             <iframe 
                                 id="player" 
                                 src="$streamUrl" 
+                                /* The 'allow-top-navigation' is omitted to block redirects */
+                                sandbox="allow-scripts allow-forms allow-same-origin allow-presentation"
                                 allow="autoplay; fullscreen; encrypted-media; picture-in-picture" 
                                 allowfullscreen 
                                 scrolling="no">
