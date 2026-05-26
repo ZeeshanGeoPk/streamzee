@@ -26,5 +26,4 @@ object NetworkClient {
         .build()
 
     val tmdbApi: TmdbApi = retrofit.create(TmdbApi::class.java)
-    val allAnimeApi: AllAnimeApi = AllAnimeApi(httpClient)
 }

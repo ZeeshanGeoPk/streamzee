@@ -232,6 +232,8 @@ fun streamzeeApp(viewModel: MainViewModel) {
                     is Screen.AnimeDetails -> animeDetailsScreen(
                         show = screen.show,
                         episodes = uiState.animeEpisodes,
+                        isLoading = uiState.isLoading,
+                        errorMessage = uiState.errorMessage,
                         selectedTranslation = uiState.selectedTranslationType,
                         onTranslationChange = { viewModel.updateAnimeTranslation(it) },
                         onBack = { viewModel.openSearch() },

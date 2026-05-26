@@ -64,12 +64,12 @@ val playerSources = listOf(
         ),
     ),
     PlaybackSource(
-        id = "allmanga",
-        label = "AllManga",
+        id = "anikoto",
+        label = "Anikoto",
         tag = "ANIME",
         supportsProgress = true,
         async = true,
-        movieUrl = { _ -> "https://allmanga.to" },
-        tvUrl = { _, _, _ -> "https://allmanga.to" },
+        movieUrl = { _ -> "https://megaplay.buzz" },
+        tvUrl = { _, _, _ -> "https://megaplay.buzz" },
     ),
 )

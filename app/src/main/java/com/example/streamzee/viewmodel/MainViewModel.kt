@@ -3,12 +3,12 @@ package com.example.streamzee.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.streamzee.data.AllAnimeShow
-import com.example.streamzee.data.AllAnimeSourceUrl
 import com.example.streamzee.data.NetworkClient
 import com.example.streamzee.data.PlaybackSource
 import com.example.streamzee.data.TmdbMovie
 import com.example.streamzee.data.TmdbEpisode
+import com.example.streamzee.data.AnikotoShow
+import com.example.streamzee.data.AnikotoEpisode
 import com.example.streamzee.repository.StreamzeeRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -40,9 +40,9 @@ sealed interface Screen {
         val tvEpisode: Int? = null,
         val resumePositionMs: Long? = null,
     ) : Screen
-    data class AnimeDetails(val show: AllAnimeShow) : Screen
+    data class AnimeDetails(val show: AnikotoShow) : Screen
     data class AnimePlayer(
-        val show: AllAnimeShow,
+        val show: AnikotoShow,
         val episode: Int,
         val streamUrl: String, // The resolved direct link
         val translationType: String = "sub",
@@ -78,7 +78,7 @@ data class MainUiState(
     val searchMode: SearchMode = SearchMode.MOVIES,
     val searchQuery: String = "",
     val searchResults: List<TmdbMovie> = emptyList(),
-    val animeSearchResults: List<AllAnimeShow> = emptyList(),
+    val animeSearchResults: List<AnikotoShow> = emptyList(),
     val isLoading: Boolean = false,
     val isSearching: Boolean = false,
     val isLoadingSaved: Boolean = false,
@@ -112,11 +112,11 @@ data class MainUiState(
     val storageUsedGb: Double = 45.6,
     val storageTotalGb: Double = 128.0,
     val selectedTranslationType: String = "sub", // Added
-    val animeEpisodes: List<String> = emptyList() // Added
+    val animeEpisodes: List<AnikotoEpisode> = emptyList() // Added
 )
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
-    private val repository = StreamzeeRepository(NetworkClient.tmdbApi, application, NetworkClient.allAnimeApi)
+    private val repository = StreamzeeRepository(NetworkClient.tmdbApi, application)
 
     private val _uiState = MutableStateFlow(MainUiState())
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
@@ -354,53 +354,44 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun openAnimeDetails(show: AllAnimeShow) {
-        val totalEpisodes = show.episodeCount ?: 0
-        
-        // Generate the list of strings for the grid (e.g., "1", "2", "3"...)
-        val episodeList = (1..totalEpisodes).map { it.toString() }
-        
-        _uiState.update { it.copy(
-            currentScreen = Screen.AnimeDetails(show),
-            animeEpisodes = episodeList, // This fills the grid
-            errorMessage = null
-        ) }
+    fun openAnimeDetails(show: AnikotoShow) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            try {
+                val episodes = repository.fetchAnimeEpisodes(show.id)
+                _uiState.update { state -> 
+            state.copy(
+                currentScreen = Screen.AnimeDetails(show),
+                animeEpisodes = episodes,
+                isLoading = false
+            )
+        }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, errorMessage = e.message) }
+            }
+        }
     }
 
-    fun playAnime(show: AllAnimeShow, episode: Int) {
+    fun playAnime(show: AnikotoShow, episodeNumber: Int) {
         viewModelScope.launch {
-            // 1. Show loading state while resolving
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            
+            _uiState.update { it.copy(isLoading = true) }
             try {
-                val type = _uiState.value.selectedTranslationType
+                // 1. Get the episodes again to find the specific embed ID
+                val episodes = repository.fetchAnimeEpisodes(show.id)
+                val episodeData = episodes.find { it.number == episodeNumber }
                 
-                // 2. Resolve sources using your repository/API decryption logic
-                val sources = repository.resolveAnimeEpisode(show.aid, episode.toString(), type)
-                
-                // 3. Selection Logic: Prefer "S-mp4", then any "mp4", then first available
-                val bestSource = sources.firstOrNull { it.sourceName?.contains("S-mp4", ignoreCase = true) == true }
-                    ?: sources.firstOrNull { it.sourceName?.contains("mp4", ignoreCase = true) == true }
-                    ?: sources.firstOrNull()
-
-                val streamUrl = bestSource?.sourceUrl
-
-                if (!streamUrl.isNullOrBlank()) {
-                    // 4. Success: Navigate to Native ExoPlayer screen
+                if (episodeData != null) {
+                    // 2. Construct the MegaPlay URL
+                    val megaPlayUrl = "https://megaplay.buzz/video?id=${episodeData.episodeEmbedId}"
+                    
+                    // 3. Open Player (Switching back to WebView for MegaPlay since it's an embed)
                     _uiState.update { it.copy(
                         isLoading = false,
-                        currentScreen = Screen.AnimePlayer(
-                            show = show,
-                            episode = episode,
-                            streamUrl = streamUrl,
-                            translationType = type
-                        )
+                        currentScreen = Screen.AnimePlayer(show, episodeNumber, megaPlayUrl)
                     )}
-                } else {
-                    _uiState.update { it.copy(isLoading = false, errorMessage = "No playable sources found.") }
                 }
             } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, errorMessage = "Resolution Error: ${e.message}") }
+                _uiState.update { it.copy(isLoading = false, errorMessage = "Failed to load MegaPlay: ${e.message}") }
             }
         }
     }
@@ -426,10 +417,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         resumePositionMs: Long? = null,
     ) {
         _uiState.update { it.copy(currentScreen = Screen.Player(movie, source, tvSeason, tvEpisode, resumePositionMs), errorMessage = null) }
-    }
-
-    suspend fun resolveAnimeEpisode(showId: String, episodeString: String): List<AllAnimeSourceUrl> {
-        return repository.resolveAnimeEpisode(showId, episodeString)
     }
     
     fun updateAnimeTranslation(type: String) {

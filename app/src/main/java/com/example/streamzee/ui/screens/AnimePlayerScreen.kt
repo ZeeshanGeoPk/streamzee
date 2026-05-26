@@ -26,12 +26,14 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
-import com.example.streamzee.data.AllAnimeShow
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import com.example.streamzee.data.AnikotoShow
 
 @OptIn(UnstableApi::class)
 @Composable
 fun animePlayerScreen(
-    show: AllAnimeShow,
+    show: AnikotoShow,
     episode: Int,
     streamUrl: String,
     onBack: () -> Unit,
@@ -63,25 +65,17 @@ fun animePlayerScreen(
             .background(Color.Black)
     ) {
         // 3. Native Player UI
-        AndroidView(
-            factory = { ctx ->
-                PlayerView(ctx).apply {
-                    player = exoPlayer
-                    useController = true // Shows the native seek bar/controls
-                    setBackgroundColor(android.graphics.Color.BLACK)
-                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                    
-                    // Style the controller background to match the app
-                    setShowBuffering(PlayerView.SHOW_BUFFERING_ALWAYS)
-                    
-                    layoutParams = FrameLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT
-                    )
-                }
-            },
-            modifier = Modifier.fillMaxSize()
-        )
+            AndroidView(
+        factory = { ctx ->
+            WebView(ctx).apply {
+                settings.javaScriptEnabled = true
+                settings.domStorageEnabled = true
+                webViewClient = WebViewClient() // Add your ad-block logic here
+                loadUrl(streamUrl) // streamUrl is now the megaplay.buzz link
+            }
+        },
+        modifier = Modifier.fillMaxSize()
+    )
 
         // 4. Cinematic Top Overlay
         Row(

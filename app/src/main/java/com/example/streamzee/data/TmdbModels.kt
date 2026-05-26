@@ -43,41 +43,60 @@ data class TmdbEpisode(
     @SerializedName("runtime") val runtime: Int? = null
 )
 
-// AllAnime data models for anime episode resolution
-data class AllAnimeSearchResponse(
-    val data: AllAnimeSearchData?
+// Updated Anime Model for Anikoto
+data class AnikotoSearchResponse(
+    val results: List<AnikotoShow> = emptyList()
 )
 
-data class AllAnimeSearchData(
-    val shows: AllAnimeShowsEdges?
+data class AnikotoShow(
+    val id: String,
+    val title: String,
+    val image: String?,
+    @SerializedName("type") val animeType: String? = null,
+    val episodeCount: Int? = 0,
+    val score: String? = "N/A" // Added to match UI expectation
+) {
+    // Keep UI compatibility with previous code
+    val aid: String get() = id
+    val name: String get() = title
+    val thumbnail: String? get() = image
+}
+
+data class AnikotoSeriesResponse(
+    val id: String,
+    val title: String,
+    val episodes: List<AnikotoEpisode> = emptyList()
 )
 
-data class AllAnimeShowsEdges(
-    val edges: List<AllAnimeShow>? = emptyList()
+data class AnikotoEpisode(
+    val number: Int,
+    // Use SerializedName to match the API's snake_case key
+    @SerializedName("episode_embed_id") val episodeEmbedId: String 
 )
 
-data class AllAnimeShow(
-    @SerializedName("_id") val aid: String = "",
-    val name: String = "",
-    val thumbnail: String? = null,
-    @SerializedName("availableEpisodes") val episodeCount: Int? = null
+// Jikan Search Models
+data class JikanSearchResponse(
+    val data: List<JikanAnime> = emptyList()
 )
 
-data class AllAnimeEpisodeResponse(
-    val data: AllAnimeEpisodeData?
+data class JikanAnime(
+    @SerializedName("mal_id") val malId: Int,
+    val title: String,
+    val images: JikanImages,
+    val type: String?,
+    val episodes: Int?,
+    val score: Double? // Added to capture rating
 )
 
-data class AllAnimeEpisodeData(
-    val episode: AllAnimeEpisode?
+data class JikanImages(
+    val jpg: JikanImageUrls
 )
 
-data class AllAnimeEpisode(
-    val episodeString: String? = "",
-    val sourceUrls: List<AllAnimeSourceUrl>? = emptyList()
+data class JikanImageUrls(
+    @SerializedName("image_url") val imageUrl: String
 )
 
-data class AllAnimeSourceUrl(
-    val sourceUrl: String? = "",
-    val sourceName: String? = "",
-    val priority: Float? = 0f
+// Bridge Model (MAL ID -> Anikoto/HiAnime ID)
+data class AnimeBridgeResponse(
+    val id: String // The Anikoto ID (e.g. "solo-leveling-18718")
 )

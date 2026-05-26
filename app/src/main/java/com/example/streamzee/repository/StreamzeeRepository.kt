@@ -3,6 +3,9 @@ package com.example.streamzee.repository
 import android.content.Context
 import com.example.streamzee.data.AppDataStore
 import com.example.streamzee.data.TmdbApi
+import com.example.streamzee.data.AnikotoShow
+import com.example.streamzee.data.AnikotoSeriesResponse
+import com.example.streamzee.data.AnikotoEpisode
 import com.example.streamzee.data.TmdbMovie
 import com.example.streamzee.data.TmdbSeasonResponse
 import kotlinx.coroutines.async
@@ -18,12 +21,11 @@ import okhttp3.Request
 import com.example.streamzee.data.SubtitleItem
 import com.example.streamzee.data.SubtitleSearchResult
 import com.example.streamzee.data.downloadAndExtractFirstSubtitle
-import com.example.streamzee.data.AllAnimeApi
 
 class StreamzeeRepository(
     private val api: TmdbApi,
     private val context: Context,
-    private val allAnimeApi: AllAnimeApi,
+
 ) {
     fun apiKeyFlow() = AppDataStore.apiKeyFlow(context)
 
@@ -232,15 +234,24 @@ class StreamzeeRepository(
         AppDataStore.saveWatchProgress(context, movieId, positionMs, season, episode)
     }
 
-    suspend fun searchAnime(query: String): List<com.example.streamzee.data.AllAnimeShow> = withContext(Dispatchers.IO) {
-        allAnimeApi.searchAnime(query)
+    suspend fun searchAnime(query: String): List<AnikotoShow> = withContext(Dispatchers.IO) {
+        val jikanResults = api.searchJikan(query)
+        jikanResults.data.map { 
+            AnikotoShow(
+                id = it.malId.toString(),
+                title = it.title,
+                image = it.images.jpg.imageUrl,
+                animeType = it.type,
+                episodeCount = it.episodes ?: 0,
+                score = it.score?.let { s -> String.format("%.1f", s) } ?: "N/A"
+            )
+        }
     }
 
-    suspend fun resolveAnimeEpisode(
-        showId: String,
-        episodeString: String,
-        translationType: String = "sub"
-    ): List<com.example.streamzee.data.AllAnimeSourceUrl> = withContext(Dispatchers.IO) {
-        allAnimeApi.resolveEpisode(showId, episodeString, translationType)
+    suspend fun fetchAnimeEpisodes(malId: String): List<AnikotoEpisode> = withContext(Dispatchers.IO) {
+        // Use 'api' since the methods are now in TmdbApi
+        val bridge = api.getAnikotoId(malId.toInt())
+        api.getAnikotoSeries(bridge.id).episodes
     }
+    
 }

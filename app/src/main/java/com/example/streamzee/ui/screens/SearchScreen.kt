@@ -26,8 +26,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.example.streamzee.data.AllAnimeShow
 import com.example.streamzee.data.TmdbMovie
+import com.example.streamzee.data.AnikotoShow
 import com.example.streamzee.viewmodel.SearchMode
 
 private const val TMDB_IMAGE_W500 = "https://image.tmdb.org/t/p/w500"
@@ -41,12 +41,12 @@ fun searchScreen(
     query: String,
     searchMode: SearchMode,
     searchResults: List<TmdbMovie>,
-    animeSearchResults: List<AllAnimeShow>,
+    animeSearchResults: List<AnikotoShow>,
     onQueryChange: (String) -> Unit,
     onSearchSubmit: (String) -> Unit,
     onModeSelected: (SearchMode) -> Unit,
     onMovieClicked: (TmdbMovie) -> Unit,
-    onAnimeClicked: (AllAnimeShow) -> Unit,
+    onAnimeClicked: (AnikotoShow) -> Unit,
     onBack: () -> Unit,
     isSearching: Boolean,
     errorMessage: String?,
@@ -253,7 +253,7 @@ private fun emptyStateMessage(message: String) {
 }
 
 @Composable
-private fun animeResultCardPremium(show: AllAnimeShow, onClick: () -> Unit) {
+private fun animeResultCardPremium(show: AnikotoShow, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -313,8 +313,8 @@ private fun animeResultCardPremium(show: AllAnimeShow, onClick: () -> Unit) {
                 ) {
                     Text("ANIME", color = Purple, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 }
-                show.episodeCount?.let {
-                    Text("$it episodes", color = TextSec, fontSize = 12.sp)
+                show.animeType?.let {
+                    Text(it, color = TextSec, fontSize = 12.sp)
                 }
             }
         }

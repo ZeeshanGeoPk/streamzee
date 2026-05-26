@@ -24,7 +24,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.example.streamzee.data.AllAnimeShow
+import com.example.streamzee.data.AnikotoShow
+import com.example.streamzee.data.AnikotoEpisode
 
 private val Purple = Color(0xFFA855F7)
 private val DarkBg = Color(0xFF000000)
@@ -33,59 +34,89 @@ private val TextSec = Color(0xFF8E8E9F)
 
 @Composable
 fun animeDetailsScreen(
-    show: AllAnimeShow,
-    episodes: List<String>,
+    show: AnikotoShow,
+    episodes: List<AnikotoEpisode>,
     selectedTranslation: String,
     onTranslationChange: (String) -> Unit,
     onBack: () -> Unit,
     onPlayEpisode: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    isLoading: Boolean, // Ensure this is passed from uiState.isLoading
+    errorMessage: String? // Optional error message to display
 ) {
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        containerColor = DarkBg
-    ) { padding ->
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(4), // 4 episodes per row
-            modifier = Modifier.fillMaxSize().padding(padding),
-            contentPadding = PaddingValues(bottom = 32.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            // 1. Hero Banner (Spans all 4 columns)
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                animeHeroSection(show, onBack)
-            }
+    // 1. Wrap everything in a Box to allow overlaying
+    Box(modifier = modifier.fillMaxSize()) {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            containerColor = DarkBg
+        ) { padding ->
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(4),
+                modifier = Modifier.fillMaxSize().padding(padding),
+                contentPadding = PaddingValues(bottom = 32.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    animeHeroSection(show, episodes.size ,onBack)
+                }
 
-            // 2. Sub/Dub Switcher (Spans all 4 columns)
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                translationToggle(selectedTranslation, onTranslationChange)
-            }
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    translationToggle(selectedTranslation, onTranslationChange)
+                }
 
-            // 3. Episode Header (Spans all 4 columns)
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                Text(
-                    "Episodes",
-                    color = Color.White,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(16.dp)
-                )
-            }
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Text(
+                        "Episodes",
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                }
 
-            // 4. Episode Grid Items
-            items(episodes) { episodeNum ->
-                episodeGridCard(
-                    num = episodeNum,
-                    onClick = { onPlayEpisode(episodeNum.toInt()) }
-                )
+                items(episodes) { episode ->
+                    episodeGridCard(
+                        num = episode.number.toString(),
+                        onClick = { onPlayEpisode(episode.number) }
+                    )
+                }
+            }
+        }
+        // Add this in the Box
+        errorMessage?.let { message ->
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 100.dp) // Below the hero banner
+                    .padding(16.dp)
+                    .background(Color.Red.copy(alpha = 0.8f), RoundedCornerShape(8.dp))
+                    .padding(12.dp)
+            ) {
+                Text(message, color = Color.White, fontSize = 14.sp)
+            }
+        }
+        // 2. Add the Loading Overlay
+        if (isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.7f))
+                    .clickable(enabled = false) {}, // Block clicks to items behind
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator(color = Purple)
+                    Spacer(Modifier.height(12.dp))
+                    Text("Resolving Links...", color = Color.White, fontSize = 14.sp)
+                }
             }
         }
     }
 }
 
 @Composable
-private fun animeHeroSection(show: AllAnimeShow, onBack: () -> Unit) {
+private fun animeHeroSection(show: AnikotoShow, episodeCount: Int, onBack: () -> Unit) {
     Box(modifier = Modifier.fillMaxWidth().height(400.dp)) {
         // Backdrop Image
         AsyncImage(
@@ -121,9 +152,9 @@ private fun animeHeroSection(show: AllAnimeShow, onBack: () -> Unit) {
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     Icon(Icons.Default.Star, null, tint = Color.Yellow, modifier = Modifier.size(14.dp))
-                    Text("N/A", color = TextSec, fontSize = 12.sp)
+                    Text(show.score ?: "N/A", color = TextSec, fontSize = 12.sp)
                 }
-                Text("${show.episodeCount ?: 0} Episodes", color = TextSec, fontSize = 12.sp)
+                Text("${show.episodeCount ?: episodeCount} Episodes", color = TextSec, fontSize = 12.sp)
             }
         }
     }
