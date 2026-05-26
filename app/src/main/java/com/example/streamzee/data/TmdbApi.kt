@@ -56,12 +56,4 @@ interface TmdbApi {
     // 1. Search via Jikan
     @GET("https://api.jikan.moe/v4/anime")
     suspend fun searchJikan(@Query("q") query: String): JikanSearchResponse
-
-    // 2. Map MAL ID to Anikoto ID
-    @GET("https://ani-info-fw6h.shuttle.app/v1/mal/{malId}")
-    suspend fun getAnikotoId(@Path("malId") malId: Int): AnimeBridgeResponse
-
-    // 3. Get Episode List
-    @GET("https://anikotoapi.site/series/{id}")
-    suspend fun getAnikotoSeries(@Path("id") id: String): AnikotoSeriesResponse
 }

@@ -49,14 +49,13 @@ data class AnikotoSearchResponse(
 )
 
 data class AnikotoShow(
-    val id: String,
+    val id: String, // This stores the mal_id from Jikan
     val title: String,
     val image: String?,
     @SerializedName("type") val animeType: String? = null,
     val episodeCount: Int? = 0,
     val score: String? = "N/A" // Added to match UI expectation
 ) {
-    // Keep UI compatibility with previous code
     val aid: String get() = id
     val name: String get() = title
     val thumbnail: String? get() = image
@@ -99,4 +98,14 @@ data class JikanImageUrls(
 // Bridge Model (MAL ID -> Anikoto/HiAnime ID)
 data class AnimeBridgeResponse(
     val id: String // The Anikoto ID (e.g. "solo-leveling-18718")
+)
+
+data class MalSyncResponse(
+    @SerializedName("Sites") val sites: Map<String, Map<String, MalSyncSiteItem>>?
+)
+
+data class MalSyncSiteItem(
+    val id: Int,             // This is the numeric ID (e.g., 346 or 81392)
+    val identifier: String,
+    val url: String
 )

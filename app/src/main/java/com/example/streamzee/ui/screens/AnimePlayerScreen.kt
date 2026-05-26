@@ -1,8 +1,14 @@
 package com.example.streamzee.ui.screens
 
+import android.view.View
 import android.view.ViewGroup
+import android.webkit.PermissionRequest
+import android.webkit.SslErrorHandler
+import android.webkit.WebChromeClient
+import android.webkit.WebSettings
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import android.widget.FrameLayout
-import androidx.annotation.OptIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -20,17 +26,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
-import androidx.media3.common.util.UnstableApi
-import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.AspectRatioFrameLayout
-import androidx.media3.ui.PlayerView
-import android.webkit.WebView
-import android.webkit.WebViewClient
 import com.example.streamzee.data.AnikotoShow
 
-@OptIn(UnstableApi::class)
 @Composable
 fun animePlayerScreen(
     show: AnikotoShow,
@@ -41,21 +38,16 @@ fun animePlayerScreen(
 ) {
     val context = LocalContext.current
     val purple = Color(0xFFA855F7)
+    val webViewRef = remember { mutableStateOf<WebView?>(null) }
 
-    // 1. Initialize ExoPlayer with support for HLS and Progressive MP4
-    val exoPlayer = remember {
-        ExoPlayer.Builder(context).build().apply {
-            val mediaItem = MediaItem.fromUri(streamUrl)
-            setMediaItem(mediaItem)
-            prepare()
-            playWhenReady = true // Auto-play on start
-        }
-    }
-
-    // 2. Manage Lifecycle: Release player when leaving the screen
     DisposableEffect(Unit) {
         onDispose {
-            exoPlayer.release()
+            webViewRef.value?.apply {
+                stopLoading()
+                loadUrl("about:blank")
+                destroy()
+            }
+            webViewRef.value = null
         }
     }
 
@@ -64,20 +56,95 @@ fun animePlayerScreen(
             .fillMaxSize()
             .background(Color.Black)
     ) {
-        // 3. Native Player UI
-            AndroidView(
-        factory = { ctx ->
-            WebView(ctx).apply {
-                settings.javaScriptEnabled = true
-                settings.domStorageEnabled = true
-                webViewClient = WebViewClient() // Add your ad-block logic here
-                loadUrl(streamUrl) // streamUrl is now the megaplay.buzz link
-            }
-        },
-        modifier = Modifier.fillMaxSize()
-    )
+        AndroidView(
+            factory = { ctx ->
+                WebView(ctx).apply {
+                    // FIX 1: Force Hardware Acceleration for the video layer
+                    setLayerType(View.LAYER_TYPE_HARDWARE, null)
+                    
+                    // FIX 2: Ensure background doesn't block the video surface
+                    setBackgroundColor(android.graphics.Color.BLACK)
 
-        // 4. Cinematic Top Overlay
+                    layoutParams = FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+
+                    settings.apply {
+                        javaScriptEnabled = true
+                        domStorageEnabled = true
+                        mediaPlaybackRequiresUserGesture = false
+                        mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                        
+                        @Suppress("DEPRECATION")
+                        safeBrowsingEnabled = false 
+
+                        userAgentString = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+                    }
+
+                    webViewClient = object : WebViewClient() {
+                        override fun onReceivedSslError(
+                            view: WebView?,
+                            handler: SslErrorHandler?,
+                            error: android.net.http.SslError?
+                        ) {
+                            handler?.proceed() 
+                        }
+                    }
+                    
+                    webChromeClient = object : WebChromeClient() {
+                        override fun onPermissionRequest(request: PermissionRequest) {
+                            request.grant(request.resources)
+                        }
+                    }
+
+                    addJavascriptInterface(object {
+                        @android.webkit.JavascriptInterface
+                        fun onTimeUpdate(seconds: Float) {
+                            // Logic for progress tracking goes here
+                        }
+                    }, "Android")
+
+                    val htmlWrapper = """
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+                            <style>
+                                body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; }
+                                iframe { border: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
+                            </style>
+                        </head>
+                        <body>
+                            <iframe 
+                                id="player" 
+                                src="$streamUrl" 
+                                allow="autoplay; fullscreen; encrypted-media; picture-in-picture" 
+                                allowfullscreen 
+                                scrolling="no">
+                            </iframe>
+                            <script>
+                                window.addEventListener("message", function(event) {
+                                    if (event.data.event === "time") {
+                                        Android.onTimeUpdate(event.data.time);
+                                    }
+                                    if (event.data.type === "watching-log") {
+                                        Android.onTimeUpdate(event.data.currentTime);
+                                    }
+                                });
+                            </script>
+                        </body>
+                        </html>
+                    """.trimIndent()
+
+                    loadDataWithBaseURL("https://megaplay.buzz", htmlWrapper, "text/html", "UTF-8", "https://megaplay.buzz/")
+                    webViewRef.value = this
+                }
+            },
+            modifier = Modifier.fillMaxSize()
+        )
+
+        // Overlay UI
         Row(
             modifier = Modifier
                 .fillMaxWidth()

@@ -355,45 +355,33 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun openAnimeDetails(show: AnikotoShow) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            try {
-                val episodes = repository.fetchAnimeEpisodes(show.id)
-                _uiState.update { state -> 
+        // Generate the list of episodes locally based on Jikan's total count
+        val totalEpisodes = show.episodeCount ?: 1
+        val generatedEpisodes = (1..totalEpisodes).map { 
+            AnikotoEpisode(number = it, episodeEmbedId = "") // Embed ID is empty because we use MAL ID
+        }
+
+        _uiState.update { state ->
             state.copy(
                 currentScreen = Screen.AnimeDetails(show),
-                animeEpisodes = episodes,
-                isLoading = false
+                animeEpisodes = generatedEpisodes,
+                isLoading = false,
+                errorMessage = null
             )
-        }
-            } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, errorMessage = e.message) }
-            }
         }
     }
 
     fun playAnime(show: AnikotoShow, episodeNumber: Int) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            try {
-                // 1. Get the episodes again to find the specific embed ID
-                val episodes = repository.fetchAnimeEpisodes(show.id)
-                val episodeData = episodes.find { it.number == episodeNumber }
-                
-                if (episodeData != null) {
-                    // 2. Construct the MegaPlay URL
-                    val megaPlayUrl = "https://megaplay.buzz/video?id=${episodeData.episodeEmbedId}"
-                    
-                    // 3. Open Player (Switching back to WebView for MegaPlay since it's an embed)
-                    _uiState.update { it.copy(
-                        isLoading = false,
-                        currentScreen = Screen.AnimePlayer(show, episodeNumber, megaPlayUrl)
-                    )}
-                }
-            } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, errorMessage = "Failed to load MegaPlay: ${e.message}") }
-            }
-        }
+        val language = _uiState.value.selectedTranslationType // "sub" or "dub"
+        
+        // MEGA-PLAY MAL ENDPOINT: /stream/mal/{mal-id}/{ep-num}/{language}
+        // show.id is the MAL ID we got from Jikan
+        val megaPlayUrl = "https://megaplay.buzz/stream/mal/${show.id}/$episodeNumber/$language"
+        
+        _uiState.update { it.copy(
+            currentScreen = Screen.AnimePlayer(show, episodeNumber, megaPlayUrl),
+            errorMessage = null
+        )}
     }
     
     

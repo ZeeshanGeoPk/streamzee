@@ -247,11 +247,4 @@ class StreamzeeRepository(
             )
         }
     }
-
-    suspend fun fetchAnimeEpisodes(malId: String): List<AnikotoEpisode> = withContext(Dispatchers.IO) {
-        // Use 'api' since the methods are now in TmdbApi
-        val bridge = api.getAnikotoId(malId.toInt())
-        api.getAnikotoSeries(bridge.id).episodes
-    }
-    
 }
