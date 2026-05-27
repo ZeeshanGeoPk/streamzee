@@ -1,4 +1,4 @@
-# Streamzee 🎬 `v1.0.0-beta1`
+# <img src="streamzee_logo.png" width="45" valign="middle" /> Streamzee `v1.0.0-beta1`
 
 **Streamzee** is a clean, cinematic, and unified streaming hub for Android. It brings together Movies, TV Series, and Anime into a single, high-performance interface built entirely with Jetpack Compose.
 
@@ -6,27 +6,53 @@
 
 ---
 
-## 📱 App UI Gallery
+## 📱 App Demo & UI Showcase
 
-### 1. Setup & Discovery
-| TMDB Key Setup | Home Dashboard | Explore & Search |
-|:---:|:---:|:---:|
-| ![Setup](Screenshots/appSS/Screenshot%20from%202026-05-27%2016-02-36.png) | ![Home](Screenshots/appSS/Screenshot%20from%202026-05-27%2016-20-03.png) | ![Search](Screenshots/appSS/Screenshot%20from%202026-05-27%2016-20-37.png) |
+Streamzee is designed with an AMOLED-black aesthetic and purple neon accents to provide a premium viewing experience.
 
-### 2. Movies & TV Series
-| Cinematic Details | Smart Resume Logic |
+### 🏠 Home & Discovery
+| Home Page | Personal Watchlist |
 |:---:|:---:|
-| ![Details](Screenshots/appSS/Screenshot%20from%202026-05-27%2016-22-02.png) | ![Resume](Screenshots/appSS/Screenshot%20from%202026-05-27%2016-23-30.png) |
+| ![Home](Screenshots/appSS/home_page.png) | ![Watchlist](Screenshots/appSS/watchlist.png) |
 
-### 3. Anime Experience (Jikan + MegaPlay)
-| Anime Search | Details & Translation | Episode Selection |
+### 🔍 Universal Search (Categories)
+| Movies | TV Shows | Anime |
 |:---:|:---:|:---:|
-| ![AnimeSearch](Screenshots/appSS/Screenshot%20from%202026-05-27%2016-30-29.png) | ![AnimeDetails](Screenshots/appSS/Screenshot%20from%202026-05-27%2016-31-58.png) | ![AnimeEpisodes](Screenshots/appSS/Screenshot%20from%202026-05-27%2016-32-19.png) |
+| ![SearchMovies](Screenshots/appSS/search_movies.png) | ![SearchTV](Screenshots/appSS/search_tv_show.png) | ![SearchAnime](Screenshots/appSS/search_anime.png) |
 
-### 4. Personal Library
-| Unified Watchlist | Filtered View |
+### 📄 Detailed Metadata
+| TV Series Details | Anime Episode Grid |
 |:---:|:---:|
-| ![Watchlist](Screenshots/appSS/Screenshot%20from%202026-05-27%2016-33-05.png) | ![WatchlistEmpty](Screenshots/appSS/Screenshot%20from%202026-05-27%2016-34-02.png) |
+| ![TVDetails](Screenshots/appSS/tv_show_details_screen.png) | ![AnimeDetails](Screenshots/appSS/anime_details_screen.png) |
+
+### 📺 Immersive Playback
+| Portrait Mode | Landscape (Cinematic) | Full Screen |
+|:---:|:---:|:---:|
+| ![Portrait](Screenshots/appSS/playback_sample_portrait.png) | ![Landscape1](Screenshots/appSS/playback_sample_landscape_1.png) | ![Landscape2](Screenshots/appSS/playback_sample_landscape_2.png) |
+
+---
+
+## ⚙️ TMDB API Setup Guide
+
+To use Streamzee, you must provide your own **TMDB API Read Access Token**. Follow this step-by-step guide to get yours for free.
+
+### Step 1: Sign Up
+Search for TMDB on Google and click on the Sign Up button. Create your free account.
+| 1. Google Search | 2. Click Sign Up | 3. Fill Details |
+|:---:|:---:|:---:|
+| ![S1](Screenshots/tmdbSS/step1_google_tmdb_signup.png) | ![S2](Screenshots/tmdbSS/step2_click_on_signup.png) | ![S3](Screenshots/tmdbSS/step3_fill_signup_details.png) |
+
+### Step 2: Login & Settings
+Log in to your new account and navigate to your Profile Settings.
+| 4. Login | 5. Go to Settings | 6. API Section |
+|:---:|:---:|:---:|
+| ![S4](Screenshots/tmdbSS/step4_fill_login_details.png) | ![S5](Screenshots/tmdbSS/step5_go_to_settings.png) | ![S6](Screenshots/tmdbSS/step6_go_to_api_section_in_settings.png) |
+
+### Step 3: Generate Token
+Request an API key (select Developer), fill in the basic app details, and copy your **Read Access Token**.
+| 7. Fill API Details | 8. Copy Read Access Token | 9. Paste in Streamzee |
+|:---:|:---:|:---:|
+| ![S7](Screenshots/tmdbSS/step7_fill_api_details.png) | ![S8](Screenshots/tmdbSS/step8_copy_api_read_access_token.png) | ![S9](Screenshots/tmdbSS/step9_paste_token_in_streamzee_setup_screen.png) |
 
 ---
 
@@ -80,11 +106,6 @@ Your contributions help cover development tools and keep the project ad-free!
 
 ---
 
-## 🛡 Disclaimer
-
-Streamzee is a browser-based metadata aggregator. It does not host, store, or distribute any media files. All content is linked via third-party streaming embeds and publicly available metadata APIs. Users are responsible for ensuring their usage complies with local laws.
-
----
-**Version:** 1.0.0 Beta  
+**Version:** 1.0.0-beta1  
 **Framework:** Jetpack Compose (Kotlin)  
 **License:** MIT
