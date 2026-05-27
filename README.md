@@ -1,5 +1,9 @@
 # <img src="streamzee_logo.png" width="45" valign="middle" /> Streamzee `v1.0.0-beta1`
 
+---
+[<img src="https://img.shields.io/badge/Download_streamzee-A855F7?style=for-the-badge&logo=android&logoColor=white" width="250">](https://github.com/ZeeshanGeoPk/streamzee/releases)
+---
+
 **Streamzee** is a clean, cinematic, and unified streaming hub for Android. It brings together Movies, TV Series, and Anime into a single, high-performance interface built entirely with Jetpack Compose.
 
 > **⚠️ Beta Phase Notice:** This application is currently in its early beta. While core streaming functionality is stable, the **Downloads** and **Profile** tabs are currently under development and will be available in future updates.
