@@ -1,5 +1,6 @@
 package com.streamzee.ui.screens
 
+import com.streamzee.ui.screens.comingSoonOverlay
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -54,7 +55,8 @@ fun downloadsScreen(
     val paused = filteredQueue.filter { it.status == "Paused" }
     val completed = filteredQueue.filter { it.status == "Completed" }
     val failed = filteredQueue.filter { it.status == "Failed" }
-
+    // Coming soon overlay for non-functional features
+Box(modifier = modifier.fillMaxSize()) {
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -194,11 +196,12 @@ fun downloadsScreen(
                     color = Color(0xFFA855F7),
                     trackColor = Color(0xFF2C2C3E)
                 )
+            comingSoonOverlay("Offline Downloads")
             }
         }
     }
 }
-
+}
 @Composable
 private fun downloadCard(item: DownloadItem) {
     Row(

@@ -1,5 +1,6 @@
 package com.streamzee.ui.screens
 
+import com.streamzee.ui.screens.comingSoonOverlay
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -40,6 +41,7 @@ fun profileScreen(
     onLogout: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    Box(modifier = modifier.fillMaxSize()) {
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
@@ -303,6 +305,8 @@ fun profileScreen(
 
         item { Spacer(Modifier.height(8.dp)) }
     }
+} 
+    comingSoonOverlay("Profile Features") // Overlay for non-functional features
 }
 
 @Composable
