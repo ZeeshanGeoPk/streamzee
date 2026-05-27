@@ -64,6 +64,10 @@ fun animePlayerScreen(
         AndroidView(
             factory = { ctx ->
                 WebView(ctx).apply {
+                    
+                    overScrollMode = View.OVER_SCROLL_NEVER
+                    fitsSystemWindows = false
+                    
                     // FIX 1: Force Hardware Acceleration for the video layer
                     setLayerType(View.LAYER_TYPE_HARDWARE, null)
                     
@@ -76,6 +80,11 @@ fun animePlayerScreen(
                     )
 
                     settings.apply {
+                        loadWithOverviewMode = true
+                        useWideViewPort = true
+                        builtInZoomControls = false
+                        displayZoomControls = false
+                        setSupportZoom(false)
                         javaScriptEnabled = true
                         domStorageEnabled = true
                         mediaPlaybackRequiresUserGesture = false
@@ -121,22 +130,83 @@ fun animePlayerScreen(
                     }
                     
                     webChromeClient = object : WebChromeClient() {
-                            override fun onPermissionRequest(request: PermissionRequest) {
-                                request.grant(request.resources)
-                            }
 
-                            // Triggered when full-screen button is clicked in the player
-                            override fun onShowCustomView(view: View?, callback: CustomViewCallback?) {
-                                isFullScreen = true
-                                activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE
-                            }
+    private var customView: View? = null
+    private var customViewCallback: CustomViewCallback? = null
+    private var originalSystemUiVisibility = 0
 
-                            // Triggered when exiting full-screen
-                            override fun onHideCustomView() {
-                                isFullScreen = false
-                                activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT
-                            }
-                        }
+    override fun onPermissionRequest(request: PermissionRequest) {
+        request.grant(request.resources)
+    }
+
+    override fun onShowCustomView(
+        view: View?,
+        callback: CustomViewCallback?
+    ) {
+
+        if (customView != null) {
+            callback?.onCustomViewHidden()
+            return
+        }
+
+        customView = view
+        customViewCallback = callback
+
+        val decorView = activity?.window?.decorView as FrameLayout
+
+        originalSystemUiVisibility = decorView.systemUiVisibility
+
+        // Add fullscreen video view
+        decorView.addView(
+            customView,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        )
+
+        // Hide system UI
+        decorView.systemUiVisibility =
+            (
+                View.SYSTEM_UI_FLAG_FULLSCREEN
+                        or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                        or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                        or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                        or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                        or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                )
+
+        activity?.window?.statusBarColor = android.graphics.Color.BLACK
+        activity?.window?.navigationBarColor = android.graphics.Color.BLACK
+
+        isFullScreen = true
+
+        activity?.requestedOrientation =
+            android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+    }
+
+    override fun onHideCustomView() {
+
+        val decorView = activity?.window?.decorView as FrameLayout
+
+        customView?.let {
+            decorView.removeView(it)
+        }
+
+        customView = null
+
+        decorView.systemUiVisibility = originalSystemUiVisibility
+
+        customViewCallback?.onCustomViewHidden()
+        customViewCallback = null
+
+        isFullScreen = false
+
+        // Return to portrait properly
+        activity?.requestedOrientation =
+            android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+    }
+}
 
                     addJavascriptInterface(object {
                         @android.webkit.JavascriptInterface
@@ -146,42 +216,49 @@ fun animePlayerScreen(
                     }, "Android")
 
                     val htmlWrapper = """
-                        <!DOCTYPE html>
-                        <html>
-                        <head>
-                            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-                            <style>
-                                body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; }
-                                iframe { border: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
-                            </style>
-                        </head>
-                        <body>
-                            <iframe 
-                                id="player" 
-                                src="$streamUrl" 
-                                /* The 'allow-top-navigation' is omitted to block redirects */
-                                sandbox="allow-scripts allow-forms allow-same-origin allow-presentation"
-                                allow="autoplay; fullscreen; encrypted-media; picture-in-picture" 
-                                allowfullscreen 
-                                scrolling="no">
-                            </iframe>
-                            <script>
-                                window.addEventListener("message", function(event) {
-                                    if (event.data.event === "time") {
-                                        Android.onTimeUpdate(event.data.time);
-                                    }
-                                    if (event.data.type === "watching-log") {
-                                        Android.onTimeUpdate(event.data.currentTime);
-                                    }
-                                });
-                            </script>
-                        </body>
-                        </html>
-                    """.trimIndent()
+                                        <!DOCTYPE html>
+                                        <html>
+                                        <head>
+                                        <meta name="viewport"
+                                            content="width=device-width,
+                                            initial-scale=1.0,
+                                            maximum-scale=1.0,
+                                            user-scalable=no">
+
+                                        <style>
+                                        html, body {
+                                            margin: 0;
+                                            padding: 0;
+                                            width: 100%;
+                                            height: 100%;
+                                            background: black;
+                                            overflow: hidden;
+                                        }
+
+                                        iframe {
+                                            width: 100vw;
+                                            height: 100vh;
+                                            border: none;
+                                            overflow: hidden;
+                                        }
+                                        </style>
+                                        </head>
+
+                                        <body>
+
+                                        <iframe
+                                            src="$streamUrl"
+                                            allowfullscreen
+                                            allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+                                            sandbox="allow-scripts allow-same-origin allow-forms allow-presentation">
+                                        </iframe>
+
+                                        </body>
+                                        </html>
+                                        """.trimIndent()
                     
                     // Update: Remove 'position: absolute' from CSS to prevent clipping
-                    val updatedHtml = htmlWrapper.replace("position: absolute; top: 0; left: 0;", "")
-                    loadDataWithBaseURL("https://megaplay.buzz", updatedHtml, "text/html", "UTF-8", "https://megaplay.buzz/")
+                    loadDataWithBaseURL("https://megaplay.buzz", htmlWrapper, "text/html", "UTF-8", "https://megaplay.buzz/")
                     webViewRef.value = this
                 }
                     },
@@ -205,7 +282,15 @@ fun animePlayerScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
             IconButton(
-                onClick = onBack,
+                    onClick = {
+                        if (isFullScreen) {
+                            webViewRef.value?.webChromeClient?.onHideCustomView()
+                        } else {
+                            activity?.requestedOrientation =
+                                android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+                            onBack()
+                        }
+                    },
                 modifier = Modifier.background(Color.Black.copy(alpha = 0.5f), CircleShape)
             ) {
                 Icon(
