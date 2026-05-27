@@ -41,6 +41,8 @@ fun animePlayerScreen(
     val context = LocalContext.current
     val purple = Color(0xFFA855F7)
     val webViewRef = remember { mutableStateOf<WebView?>(null) }
+    val activity = context as? android.app.Activity
+    var isFullScreen by remember { mutableStateOf(false) }
 
     DisposableEffect(Unit) {
         onDispose {
@@ -56,7 +58,8 @@ fun animePlayerScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(Color.Black),
+        contentAlignment = Alignment.Center // Center video in portrait
     ) {
         AndroidView(
             factory = { ctx ->
@@ -118,10 +121,22 @@ fun animePlayerScreen(
                     }
                     
                     webChromeClient = object : WebChromeClient() {
-                        override fun onPermissionRequest(request: PermissionRequest) {
-                            request.grant(request.resources)
+                            override fun onPermissionRequest(request: PermissionRequest) {
+                                request.grant(request.resources)
+                            }
+
+                            // Triggered when full-screen button is clicked in the player
+                            override fun onShowCustomView(view: View?, callback: CustomViewCallback?) {
+                                isFullScreen = true
+                                activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE
+                            }
+
+                            // Triggered when exiting full-screen
+                            override fun onHideCustomView() {
+                                isFullScreen = false
+                                activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT
+                            }
                         }
-                    }
 
                     addJavascriptInterface(object {
                         @android.webkit.JavascriptInterface
@@ -163,23 +178,32 @@ fun animePlayerScreen(
                         </body>
                         </html>
                     """.trimIndent()
-
-                    loadDataWithBaseURL("https://megaplay.buzz", htmlWrapper, "text/html", "UTF-8", "https://megaplay.buzz/")
+                    
+                    // Update: Remove 'position: absolute' from CSS to prevent clipping
+                    val updatedHtml = htmlWrapper.replace("position: absolute; top: 0; left: 0;", "")
+                    loadDataWithBaseURL("https://megaplay.buzz", updatedHtml, "text/html", "UTF-8", "https://megaplay.buzz/")
                     webViewRef.value = this
                 }
-            },
-            modifier = Modifier.fillMaxSize()
-        )
+                    },
+                    modifier = if (isFullScreen) {
+                        Modifier.fillMaxSize()
+                    } else {
+                        Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(16f / 9f) // Standard video ratio for portrait view
+                    }
+                )
 
-        // Overlay UI
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .statusBarsPadding()
-                .padding(16.dp)
-                .align(Alignment.TopStart),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        // Hide your custom overlay when in full screen to avoid clutter
+        if (!isFullScreen) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(16.dp)
+                    .align(Alignment.TopStart),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
             IconButton(
                 onClick = onBack,
                 modifier = Modifier.background(Color.Black.copy(alpha = 0.5f), CircleShape)
@@ -206,7 +230,8 @@ fun animePlayerScreen(
                     color = purple,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold
-                )
+                    )
+                }
             }
         }
     }
