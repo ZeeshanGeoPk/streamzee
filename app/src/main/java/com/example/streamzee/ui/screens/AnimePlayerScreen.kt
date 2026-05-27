@@ -44,7 +44,9 @@ fun animePlayerScreen(
     val context = LocalContext.current
     val purple = Color(0xFFA855F7)
     val webViewRef = remember { mutableStateOf<WebView?>(null) }
-    val activity = context as? android.app.Activity
+    val activity = remember(context) {
+    context as android.app.Activity
+}
     var isFullScreen by remember { mutableStateOf(false) }
 
     DisposableEffect(Unit) {
@@ -136,7 +138,6 @@ fun animePlayerScreen(
 
     private var customView: View? = null
     private var customViewCallback: CustomViewCallback? = null
-    private var originalSystemUiVisibility = 0
 
     override fun onPermissionRequest(request: PermissionRequest) {
         request.grant(request.resources)
@@ -155,11 +156,8 @@ fun animePlayerScreen(
         customView = view
         customViewCallback = callback
 
-        val decorView = activity?.window?.decorView as FrameLayout
+        val decorView = activity.window.decorView as FrameLayout
 
-        originalSystemUiVisibility = decorView.systemUiVisibility
-
-        // Add fullscreen video view
         decorView.addView(
             customView,
             FrameLayout.LayoutParams(
@@ -168,64 +166,54 @@ fun animePlayerScreen(
             )
         )
 
-        // Hide system UI
         WindowCompat.setDecorFitsSystemWindows(activity.window, false)
 
-        WindowInsetsControllerCompat(
+        val controller = WindowInsetsControllerCompat(
             activity.window,
             decorView
-        ).let { controller ->
+        )
 
-            controller.hide(
-                WindowInsetsCompat.Type.statusBars() or
-                WindowInsetsCompat.Type.navigationBars()
-            )
+        controller.hide(
+            WindowInsetsCompat.Type.systemBars()
+        )
 
-            controller.systemBarsBehavior =
-                WindowInsetsControllerCompat
-                    .BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        }
-
-        activity?.window?.statusBarColor = android.graphics.Color.BLACK
-        activity?.window?.navigationBarColor = android.graphics.Color.BLACK
+        controller.systemBarsBehavior =
+            WindowInsetsControllerCompat
+                .BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
 
         isFullScreen = true
 
-        activity?.requestedOrientation =
-            android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        activity.requestedOrientation =
+            android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
     }
 
     override fun onHideCustomView() {
 
-        val decorView = activity?.window?.decorView as FrameLayout
+    val decorView = activity.window.decorView as FrameLayout
 
-        customView?.let {
-            decorView.removeView(it)
-        }
-
-        customView = null
-
-        decorView.systemUiVisibility = originalSystemUiVisibility
-
-        customViewCallback?.onCustomViewHidden()
-        customViewCallback = null
-
-        isFullScreen = false
-        
-        WindowCompat.setDecorFitsSystemWindows(activity.window, true)
-
-        WindowInsetsControllerCompat(
-            activity.window,
-            decorView
-        ).show(
-            WindowInsetsCompat.Type.statusBars() or
-            WindowInsetsCompat.Type.navigationBars()
-        )
-
-        // Return to portrait properly
-        activity?.requestedOrientation =
-            android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+    customView?.let {
+        decorView.removeView(it)
     }
+
+    customView = null
+
+    WindowCompat.setDecorFitsSystemWindows(activity.window, true)
+
+    WindowInsetsControllerCompat(
+        activity.window,
+        decorView
+    ).show(
+        WindowInsetsCompat.Type.systemBars()
+    )
+
+    customViewCallback?.onCustomViewHidden()
+    customViewCallback = null
+
+    isFullScreen = false
+
+    activity.requestedOrientation =
+        android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+}
 }
 
                     addJavascriptInterface(object {
@@ -306,7 +294,7 @@ fun animePlayerScreen(
                         if (isFullScreen) {
                             webViewRef.value?.webChromeClient?.onHideCustomView()
                         } else {
-                            activity?.requestedOrientation =
+                            activity.requestedOrientation =
                                 android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
                             onBack()
                         }
