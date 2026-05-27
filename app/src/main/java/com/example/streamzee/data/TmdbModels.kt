@@ -8,7 +8,7 @@ data class TmdbMovieResponse(
 )
 
 data class TmdbMovie(
-    val tmdbID: Long,
+    @SerializedName("id") val tmdbID: Long, // ADD THIS ANNOTATION
     val title: String?,
     val name: String? = null,
     val overview: String?,
