@@ -1,4 +1,4 @@
-package com.example.streamzee.data
+package com.streamzee.data
 
 import retrofit2.http.GET
 import retrofit2.http.Header

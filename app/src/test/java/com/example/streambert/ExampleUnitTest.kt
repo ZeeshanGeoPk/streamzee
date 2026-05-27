@@ -1,4 +1,4 @@
-package com.example.streamzee
+package com.streamzee
 
 import org.junit.Test
 

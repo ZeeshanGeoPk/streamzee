@@ -1,4 +1,4 @@
-package com.example.streamzee.data
+package com.streamzee.data
 
 import com.google.gson.GsonBuilder
 import okhttp3.OkHttpClient

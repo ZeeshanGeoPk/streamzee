@@ -1,4 +1,4 @@
-package com.example.streamzee.data
+package com.streamzee.data
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

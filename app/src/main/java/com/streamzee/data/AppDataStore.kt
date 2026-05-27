@@ -1,4 +1,4 @@
-package com.example.streamzee.data
+package com.streamzee.data
 
 import android.content.Context
 import androidx.datastore.core.DataStore

@@ -1,4 +1,4 @@
-package com.example.streamzee.ui.screens
+package com.streamzee.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -45,9 +45,9 @@ import kotlin.time.Duration.Companion.seconds
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import com.example.streamzee.data.PlaybackSource
-import com.example.streamzee.data.TmdbMovie
-import com.example.streamzee.data.playerSources
+import com.streamzee.data.PlaybackSource
+import com.streamzee.data.TmdbMovie
+import com.streamzee.data.playerSources
 
 private val ScreenBg = Color(0xFF050508)
 private val Purple = Color(0xFFA855F7)

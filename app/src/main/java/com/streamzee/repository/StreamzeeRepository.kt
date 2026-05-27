@@ -1,13 +1,13 @@
-package com.example.streamzee.repository
+package com.streamzee.repository
 
 import android.content.Context
-import com.example.streamzee.data.AppDataStore
-import com.example.streamzee.data.TmdbApi
-import com.example.streamzee.data.AnikotoShow
-import com.example.streamzee.data.AnikotoSeriesResponse
-import com.example.streamzee.data.AnikotoEpisode
-import com.example.streamzee.data.TmdbMovie
-import com.example.streamzee.data.TmdbSeasonResponse
+import com.streamzee.data.AppDataStore
+import com.streamzee.data.TmdbApi
+import com.streamzee.data.AnikotoShow
+import com.streamzee.data.AnikotoSeriesResponse
+import com.streamzee.data.AnikotoEpisode
+import com.streamzee.data.TmdbMovie
+import com.streamzee.data.TmdbSeasonResponse
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -18,9 +18,9 @@ import kotlinx.coroutines.Dispatchers
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import com.example.streamzee.data.SubtitleItem
-import com.example.streamzee.data.SubtitleSearchResult
-import com.example.streamzee.data.downloadAndExtractFirstSubtitle
+import com.streamzee.data.SubtitleItem
+import com.streamzee.data.SubtitleSearchResult
+import com.streamzee.data.downloadAndExtractFirstSubtitle
 
 class StreamzeeRepository(
     private val api: TmdbApi,

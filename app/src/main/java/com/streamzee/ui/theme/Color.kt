@@ -1,4 +1,4 @@
-package com.example.streamzee.ui.theme
+package com.streamzee.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

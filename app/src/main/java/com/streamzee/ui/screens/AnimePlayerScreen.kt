@@ -1,4 +1,4 @@
-package com.example.streamzee.ui.screens
+package com.streamzee.ui.screens
 
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -31,7 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import com.example.streamzee.data.AnikotoShow
+import com.streamzee.data.AnikotoShow
 
 @Composable
 fun animePlayerScreen(

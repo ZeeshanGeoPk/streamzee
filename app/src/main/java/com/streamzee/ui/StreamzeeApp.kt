@@ -1,4 +1,4 @@
-package com.example.streamzee.ui
+package com.streamzee.ui
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -20,20 +20,20 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.example.streamzee.data.playerSources
-import com.example.streamzee.ui.screens.animeDetailsScreen
-import com.example.streamzee.ui.screens.animePlayerScreen
-import com.example.streamzee.ui.screens.detailsScreen
-import com.example.streamzee.ui.screens.downloadsScreen
-import com.example.streamzee.ui.screens.homeScreen
-import com.example.streamzee.ui.screens.libraryScreen
-import com.example.streamzee.ui.screens.playerScreen
-import com.example.streamzee.ui.screens.profileScreen
-import com.example.streamzee.ui.screens.searchScreen
-import com.example.streamzee.ui.screens.setupScreen
-import com.example.streamzee.ui.theme.streamzeeTheme
-import com.example.streamzee.viewmodel.MainViewModel
-import com.example.streamzee.viewmodel.Screen
+import com.streamzee.data.playerSources
+import com.streamzee.ui.screens.animeDetailsScreen
+import com.streamzee.ui.screens.animePlayerScreen
+import com.streamzee.ui.screens.detailsScreen
+import com.streamzee.ui.screens.downloadsScreen
+import com.streamzee.ui.screens.homeScreen
+import com.streamzee.ui.screens.libraryScreen
+import com.streamzee.ui.screens.playerScreen
+import com.streamzee.ui.screens.profileScreen
+import com.streamzee.ui.screens.searchScreen
+import com.streamzee.ui.screens.setupScreen
+import com.streamzee.ui.theme.streamzeeTheme
+import com.streamzee.viewmodel.MainViewModel
+import com.streamzee.viewmodel.Screen
 
 @Composable
 fun streamzeeApp(viewModel: MainViewModel) {

@@ -1,4 +1,4 @@
-package com.example.streamzee.ui.screens
+package com.streamzee.ui.screens
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -24,8 +24,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.example.streamzee.data.AnikotoShow
-import com.example.streamzee.data.AnikotoEpisode
+import com.streamzee.data.AnikotoShow
+import com.streamzee.data.AnikotoEpisode
 
 private val Purple = Color(0xFFA855F7)
 private val DarkBg = Color(0xFF000000)

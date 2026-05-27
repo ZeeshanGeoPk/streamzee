@@ -1,4 +1,4 @@
-package com.example.streamzee.ui.screens
+package com.streamzee.ui.screens
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -23,8 +23,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.example.streamzee.data.TmdbMovie
-import com.example.streamzee.data.TmdbEpisode
+import com.streamzee.data.TmdbMovie
+import com.streamzee.data.TmdbEpisode
 
 private val Purple = Color(0xFFA855F7)
 private val DarkBg = Color(0xFF000000)

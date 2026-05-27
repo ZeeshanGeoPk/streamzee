@@ -1,4 +1,4 @@
-package com.example.streamzee.data
+package com.streamzee.data
 
 data class PlaybackSource(
     val id: String,

@@ -1,4 +1,4 @@
-package com.example.streamzee.ui.screens
+package com.streamzee.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -24,8 +24,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.example.streamzee.viewmodel.DownloadItem
-import com.example.streamzee.viewmodel.MainUiState
+import com.streamzee.viewmodel.DownloadItem
+import com.streamzee.viewmodel.MainUiState
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.seconds
 

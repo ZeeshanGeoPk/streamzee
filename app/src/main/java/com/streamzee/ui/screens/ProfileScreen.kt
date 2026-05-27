@@ -1,4 +1,4 @@
-package com.example.streamzee.ui.screens
+package com.streamzee.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -22,7 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.example.streamzee.viewmodel.MainUiState
+import com.streamzee.viewmodel.MainUiState
 
 private val Purple = Color(0xFFA855F7)
 private val CardBg = Color(0xFF161622)

@@ -1,6 +1,6 @@
 @file:Suppress("DEPRECATION")
 
-package com.example.streamzee.ui.screens
+package com.streamzee.ui.screens
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -30,7 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.example.streamzee.data.TmdbMovie
+import com.streamzee.data.TmdbMovie
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.seconds
 

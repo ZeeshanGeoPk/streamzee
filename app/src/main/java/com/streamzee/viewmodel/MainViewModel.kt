@@ -1,15 +1,15 @@
-package com.example.streamzee.viewmodel
+package com.streamzee.viewmodel
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.streamzee.data.NetworkClient
-import com.example.streamzee.data.PlaybackSource
-import com.example.streamzee.data.TmdbMovie
-import com.example.streamzee.data.TmdbEpisode
-import com.example.streamzee.data.AnikotoShow
-import com.example.streamzee.data.AnikotoEpisode
-import com.example.streamzee.repository.StreamzeeRepository
+import com.streamzee.data.NetworkClient
+import com.streamzee.data.PlaybackSource
+import com.streamzee.data.TmdbMovie
+import com.streamzee.data.TmdbEpisode
+import com.streamzee.data.AnikotoShow
+import com.streamzee.data.AnikotoEpisode
+import com.streamzee.repository.StreamzeeRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -83,7 +83,7 @@ data class MainUiState(
     val isSearching: Boolean = false,
     val isLoadingSaved: Boolean = false,
     val currentMovieWatchProgressMs: Long? = null,
-    val subtitleSearchResults: List<com.example.streamzee.data.SubtitleItem> = emptyList(),
+    val subtitleSearchResults: List<com.streamzee.data.SubtitleItem> = emptyList(),
     val isSearchingSubtitles: Boolean = false,
     val subtitleErrorMessage: String? = null,
     val errorMessage: String? = null,

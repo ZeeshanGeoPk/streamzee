@@ -1,4 +1,4 @@
-package com.example.streamzee.ui.screens
+package com.streamzee.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -23,7 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.automirrored.filled.Sort
 import coil.compose.AsyncImage
-import com.example.streamzee.data.TmdbMovie
+import com.streamzee.data.TmdbMovie
 
 private const val TMDB_IMAGE_W500 = "https://image.tmdb.org/t/p/w500"
 private val Purple = Color(0xFFA855F7)

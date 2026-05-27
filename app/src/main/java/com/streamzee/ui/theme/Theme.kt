@@ -1,4 +1,4 @@
-package com.example.streamzee.ui.theme
+package com.streamzee.ui.theme
 
 import android.app.Activity
 import android.os.Build

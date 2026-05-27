@@ -1,4 +1,4 @@
-package com.example.streamzee.ui.theme
+package com.streamzee.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
