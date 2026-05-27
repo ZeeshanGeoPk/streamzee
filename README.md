@@ -99,13 +99,23 @@ To maintain a high-quality experience without centralized servers, Streamzee req
 
 Streamzee is a solo-developer project. It is free to use and open-source. If you find the app useful and want to help me speed up the development of the "Downloads" feature and fix existing bugs, please consider sponsoring:
 
-- **[Support me on BuyMeACoffee](https://www.buymeacoffee.com/yourusername)**
-- **[Sponsor via GitHub](https://github.com/sponsors/yourusername)**
-
 Your contributions help cover development tools and keep the project ad-free!
+
+---
+
+## 🛡️ Disclaimer
+
+- **No Media Hosting:** Streamzee is a client-side application. It does not host, store, or distribute any media files (videos, movies, or episodes) on its own servers.
+- **Third-Party Sources:** All streaming content is accessed via third-party embeds and publicly available metadata APIs.
+- **Content Control:** We have no control over the availability, quality, or legality of the content provided by external sources.
+- **User Responsibility:** Users are solely responsible for ensuring that their use of the application complies with the local laws and regulations in their jurisdiction.
+- **Project Purpose:** This project is currently in Beta and is intended for personal use only.
 
 ---
 
 **Version:** 1.0.0-beta1  
 **Framework:** Jetpack Compose (Kotlin)  
-**License:** MIT
+
+---
+![License](https://img.shields.io/github/license/ZeeshanGeoPk/streamzee?style=for-the-badge)
+---
