@@ -6,12 +6,27 @@
 
 ---
 
-## 📸 Screenshots
+## 📱 App UI Gallery
 
-| TMDB Key Setup | Home Discovery | Anime Details |
+### 1. Setup & Discovery
+| TMDB Key Setup | Home Dashboard | Explore & Search |
 |:---:|:---:|:---:|
-| ![Setup](streamzee_logo.png) | ![Home](https://via.placeholder.com/200x400?text=Home+UI) | ![Anime](https://via.placeholder.com/200x400?text=Anime+Details) |
-| *Step 1: Authorization* | *Step 2: Browsing* | *Step 3: Streaming* |
+| ![Setup](Screenshots/appSS/Screenshot%20from%202026-05-27%2016-02-36.png) | ![Home](Screenshots/appSS/Screenshot%20from%202026-05-27%2016-20-03.png) | ![Search](Screenshots/appSS/Screenshot%20from%202026-05-27%2016-20-37.png) |
+
+### 2. Movies & TV Series
+| Cinematic Details | Smart Resume Logic |
+|:---:|:---:|
+| ![Details](Screenshots/appSS/Screenshot%20from%202026-05-27%2016-22-02.png) | ![Resume](Screenshots/appSS/Screenshot%20from%202026-05-27%2016-23-30.png) |
+
+### 3. Anime Experience (Jikan + MegaPlay)
+| Anime Search | Details & Translation | Episode Selection |
+|:---:|:---:|:---:|
+| ![AnimeSearch](Screenshots/appSS/Screenshot%20from%202026-05-27%2016-30-29.png) | ![AnimeDetails](Screenshots/appSS/Screenshot%20from%202026-05-27%2016-31-58.png) | ![AnimeEpisodes](Screenshots/appSS/Screenshot%20from%202026-05-27%2016-32-19.png) |
+
+### 4. Personal Library
+| Unified Watchlist | Filtered View |
+|:---:|:---:|
+| ![Watchlist](Screenshots/appSS/Screenshot%20from%202026-05-27%2016-33-05.png) | ![WatchlistEmpty](Screenshots/appSS/Screenshot%20from%202026-05-27%2016-34-02.png) |
 
 ---
 
