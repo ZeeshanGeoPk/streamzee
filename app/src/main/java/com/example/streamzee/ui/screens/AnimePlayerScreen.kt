@@ -1,5 +1,8 @@
 package com.example.streamzee.ui.screens
 
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.view.View
@@ -166,15 +169,22 @@ fun animePlayerScreen(
         )
 
         // Hide system UI
-        decorView.systemUiVisibility =
-            (
-                View.SYSTEM_UI_FLAG_FULLSCREEN
-                        or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                        or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                        or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                        or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                        or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                )
+        WindowCompat.setDecorFitsSystemWindows(activity.window, false)
+
+        WindowInsetsControllerCompat(
+            activity.window,
+            decorView
+        ).let { controller ->
+
+            controller.hide(
+                WindowInsetsCompat.Type.statusBars() or
+                WindowInsetsCompat.Type.navigationBars()
+            )
+
+            controller.systemBarsBehavior =
+                WindowInsetsControllerCompat
+                    .BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        }
 
         activity?.window?.statusBarColor = android.graphics.Color.BLACK
         activity?.window?.navigationBarColor = android.graphics.Color.BLACK
@@ -201,6 +211,16 @@ fun animePlayerScreen(
         customViewCallback = null
 
         isFullScreen = false
+        
+        WindowCompat.setDecorFitsSystemWindows(activity.window, true)
+
+        WindowInsetsControllerCompat(
+            activity.window,
+            decorView
+        ).show(
+            WindowInsetsCompat.Type.statusBars() or
+            WindowInsetsCompat.Type.navigationBars()
+        )
 
         // Return to portrait properly
         activity?.requestedOrientation =
