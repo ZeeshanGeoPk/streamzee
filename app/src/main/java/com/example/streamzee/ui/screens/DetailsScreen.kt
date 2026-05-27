@@ -91,7 +91,7 @@ fun detailsScreen(
             items(episodes) { episode ->
                 episodeItem(
                     episode = episode,
-                    onClick = { onPlay(movie.id.toInt(), selectedSeason, episode.episodeNumber, 0L) }
+                    onClick = { onPlay(movie.tmdbID.toInt(), selectedSeason, episode.episodeNumber, 0L) }
                 )
             }
         }
@@ -166,8 +166,8 @@ private fun actionButtonsSection(
             // Forces playback to start from the beginning (0ms)
             Button(
                 onClick = { 
-                    if (movie.isTv) onPlay(movie.id.toInt(), 1, 1, 0L) 
-                    else onPlay(movie.id.toInt(), null, null, 0L) 
+                    if (movie.isTv) onPlay(movie.tmdbID.toInt(), 1, 1, 0L) 
+                    else onPlay(movie.tmdbID.toInt(), null, null, 0L) 
                 }, 
                 modifier = Modifier.weight(1f).height(50.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Purple),
@@ -182,7 +182,7 @@ private fun actionButtonsSection(
             if (hasProgress) { // Change to hasProgress if you want to conditionally show/hide the Resume button
                 Button(
                     onClick = { 
-                        onPlay(movie.id.toInt(), lastSeason, lastEpisode, resumePositionMs) 
+                        onPlay(movie.tmdbID.toInt(), lastSeason, lastEpisode, resumePositionMs) 
                     },
                     modifier = Modifier.weight(1f).height(50.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = CardBg),
@@ -202,7 +202,7 @@ private fun actionButtonsSection(
 
         // --- WATCHLIST BUTTON ---
         OutlinedButton(
-            onClick = { onToggleSave(movie.id.toString()) },
+            onClick = { onToggleSave(movie.tmdbID.toString()) },
             modifier = Modifier.fillMaxWidth().height(50.dp),
             shape = RoundedCornerShape(8.dp),
             border = BorderStroke(1.dp, if (isSaved) Purple else Color.Gray)
@@ -242,7 +242,7 @@ private fun seasonSelector(
             Surface(
                 modifier = Modifier.clickable { 
                     onSelect(i)
-                    onSeasonChange(movie.id, i) 
+                    onSeasonChange(movie.tmdbID, i) 
                 },
                 color = if (isSelected) Purple else CardBg,
                 shape = RoundedCornerShape(8.dp)

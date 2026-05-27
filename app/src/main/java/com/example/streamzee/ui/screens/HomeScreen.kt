@@ -209,13 +209,13 @@ fun homeScreen(
                                         Text("Play", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                                     }
                                     OutlinedButton(
-                                        onClick = { onToggleSave(movie.id.toString()) },
+                                        onClick = { onToggleSave(movie.tmdbID.toString()) },
                                         shape = RoundedCornerShape(24.dp),
                                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                                         colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
                                     ) {
                                         Icon(
-                                            if (savedIds.contains(movie.id.toString())) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                            if (savedIds.contains(movie.tmdbID.toString())) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                             null,
                                             modifier = Modifier.size(16.dp)
                                         )

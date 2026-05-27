@@ -193,9 +193,9 @@ fun streamzeeApp(viewModel: MainViewModel) {
                         lastEpisode = uiState.lastWatchedEpisode ?: 1,
                         similarMovies = uiState.trendingMovies,
                         resumePositionMs = uiState.currentMovieWatchProgressMs,
-                        isSaved = uiState.savedIds.contains(screen.movie.id.toString()),
+                        isSaved = uiState.savedIds.contains(screen.movie.tmdbID.toString()),
                         onBack = viewModel::openHome,
-                        onToggleSave = { viewModel.toggleSaved(screen.movie.id.toString()) },
+                        onToggleSave = { viewModel.toggleSaved(screen.movie.tmdbID.toString()) },
                         onPlay = { id, season, episode, position -> 
                                     viewModel.openPlayer(
                                         movie = screen.movie, 
@@ -219,7 +219,7 @@ fun streamzeeApp(viewModel: MainViewModel) {
                             // If the movie is a TV show, we ALWAYS save the season/episode 
                             // even if the timestamp (pos) is 0.
                             viewModel.savePlaybackProgress(
-                                movieId = screen.movie.id.toString(), 
+                                movieId = screen.movie.tmdbID.toString(), 
                                 positionMs = pos, 
                                 season = s, 
                                 episode = e

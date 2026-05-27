@@ -238,7 +238,7 @@ class StreamzeeRepository(
         val jikanResults = api.searchJikan(query)
         jikanResults.data.map { 
             AnikotoShow(
-                id = it.malId.toString(),
+                animeMalID = it.malId.toString(),
                 title = it.title,
                 image = it.images.jpg.imageUrl,
                 animeType = it.type,

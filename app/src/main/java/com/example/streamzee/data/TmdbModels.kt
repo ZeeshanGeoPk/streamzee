@@ -8,7 +8,7 @@ data class TmdbMovieResponse(
 )
 
 data class TmdbMovie(
-    val id: Long,
+    val tmdbID: Long,
     val title: String?,
     val name: String? = null,
     val overview: String?,
@@ -49,14 +49,14 @@ data class AnikotoSearchResponse(
 )
 
 data class AnikotoShow(
-    val id: String, // This stores the mal_id from Jikan
+    val animeMalID: String, // This stores the mal_id from Jikan
     val title: String,
     val image: String?,
     @SerializedName("type") val animeType: String? = null,
     val episodeCount: Int? = 0,
     val score: String? = "N/A" // Added to match UI expectation
 ) {
-    val aid: String get() = id
+    val animeID: String get() = animeMalID
     val name: String get() = title
     val thumbnail: String? get() = image
 }

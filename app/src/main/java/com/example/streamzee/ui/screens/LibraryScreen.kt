@@ -207,7 +207,7 @@ fun libraryScreen(
                 watchlistCard(
                     movie = movie,
                     onClick = { onMovieClicked(movie) },
-                    onRemove = { onRemove(movie.id.toString()) }
+                    onRemove = { onRemove(movie.tmdbID.toString()) }
                 )
             }
         }

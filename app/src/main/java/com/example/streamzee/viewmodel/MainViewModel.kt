@@ -334,9 +334,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 // Fetch FULL details to get 'numberOfSeasons' and 'firstAirDate'
                 val fullMovie = if (movie.isTv) {
-                    repository.getTvShowDetails(apiKey, movie.id.toString())
+                    repository.getTvShowDetails(apiKey, movie.tmdbID.toString())
                 } else {
-                    repository.getMovieDetails(apiKey, movie.id.toString())
+                    repository.getMovieDetails(apiKey, movie.tmdbID.toString())
                 }
                 
                 _uiState.update { it.copy(
@@ -345,8 +345,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     isLoading = false 
                 )}
                 
-                if (fullMovie.isTv) loadSeason(fullMovie.id, 1)
-                loadWatchProgress(fullMovie.id.toString())
+                if (fullMovie.isTv) loadSeason(fullMovie.tmdbID, 1)
+                loadWatchProgress(fullMovie.tmdbID.toString())
                 
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, errorMessage = e.message) }
@@ -375,8 +375,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val language = _uiState.value.selectedTranslationType // "sub" or "dub"
         
         // MEGA-PLAY MAL ENDPOINT: /stream/mal/{mal-id}/{ep-num}/{language}
-        // show.id is the MAL ID we got from Jikan
-        val megaPlayUrl = "https://megaplay.buzz/stream/mal/${show.id}/$episodeNumber/$language"
+        // show.animeMalID is the MAL ID we got from Jikan
+        val megaPlayUrl = "https://megaplay.buzz/stream/mal/${show.animeMalID}/$episodeNumber/$language"
         
         _uiState.update { it.copy(
             currentScreen = Screen.AnimePlayer(show, episodeNumber, megaPlayUrl),

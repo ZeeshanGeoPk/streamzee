@@ -77,10 +77,10 @@ fun playerScreen(
     val candidateUrls = remember(currentSourceIndex, currentCandidateIndex, tvSeason, tvEpisode) {
         if (isTvPlayback) {
             currentSource.tvUrlCandidates.ifEmpty { listOf(currentSource.tvUrl) }
-                .map { it(movie.id.toString(), tvSeason, tvEpisode) }
+                .map { it(movie.tmdbID.toString(), tvSeason, tvEpisode) }
         } else {
             currentSource.movieUrlCandidates.ifEmpty { listOf(currentSource.movieUrl) }
-                .map { it(movie.id.toString()) }
+                .map { it(movie.tmdbID.toString()) }
         }
     }
     val currentUrl = candidateUrls.getOrNull(currentCandidateIndex).orEmpty()
@@ -160,10 +160,10 @@ fun playerScreen(
             val nextSource = allPrioritySources[currentSourceIndex]
             val nextCandidates = if (isTvPlayback) {
                 nextSource.tvUrlCandidates.ifEmpty { listOf(nextSource.tvUrl) }
-                    .map { it(movie.id.toString(), tvSeason, tvEpisode) }
+                    .map { it(movie.tmdbID.toString(), tvSeason, tvEpisode) }
             } else {
                 nextSource.movieUrlCandidates.ifEmpty { listOf(nextSource.movieUrl) }
-                    .map { it(movie.id.toString()) }
+                    .map { it(movie.tmdbID.toString()) }
             }
             if (nextCandidates.isNotEmpty()) {
                 webView.loadUrl(nextCandidates[0])
