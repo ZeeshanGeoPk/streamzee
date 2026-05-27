@@ -94,18 +94,3 @@ data class JikanImages(
 data class JikanImageUrls(
     @SerializedName("image_url") val imageUrl: String
 )
-
-// Bridge Model (MAL ID -> Anikoto/HiAnime ID)
-data class AnimeBridgeResponse(
-    val id: String // The Anikoto ID (e.g. "solo-leveling-18718")
-)
-
-data class MalSyncResponse(
-    @SerializedName("Sites") val sites: Map<String, Map<String, MalSyncSiteItem>>?
-)
-
-data class MalSyncSiteItem(
-    val id: Int,             // This is the numeric ID (e.g., 346 or 81392)
-    val identifier: String,
-    val url: String
-)
