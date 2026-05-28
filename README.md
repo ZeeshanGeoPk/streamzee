@@ -101,9 +101,24 @@ To maintain a high-quality experience without centralized servers, Streamzee req
 
 ## ❤️ Support & Sponsorship
 
-Streamzee is a solo-developer project. It is free to use and open-source. If you find the app useful and want to help me speed up the development of the "Downloads" feature and fix existing bugs, please consider sponsoring:
+Streamzee is a solo developer project that is completely free to use and open source.
+If you enjoy using the app and would like to support its growth, please consider becoming a sponsor.
 
-Your contributions help cover development tools and keep the project ad-free!
+Your support helps me:
+
+* Speed up development of new features like **Downloads**
+* Fix bugs and improve stability
+* Cover development and infrastructure costs
+* Keep the project completely ad-free and privacy-friendly
+
+### Support the Project
+
+* [Patreon Post](https://www.patreon.com/posts/streamzee-free-159437752): https://www.patreon.com/posts/streamzee-free-159437752
+* [Patreon Page](https://www.patreon.com/cw/zeeshanoo): https://www.patreon.com/cw/zeeshanoo
+
+Every contribution, no matter the size, helps keep the project moving forward. Thank you for supporting independent open-source development ❤️
+
+
 
 ---
 
