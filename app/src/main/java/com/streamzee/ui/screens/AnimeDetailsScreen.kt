@@ -24,8 +24,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.streamzee.data.AnikotoShow
-import com.streamzee.data.AnikotoEpisode
+import com.streamzee.data.MegaPlayShow
+import com.streamzee.data.MegaPlayEpisode
 
 private val Purple = Color(0xFFA855F7)
 private val DarkBg = Color(0xFF000000)
@@ -34,8 +34,8 @@ private val TextSec = Color(0xFF8E8E9F)
 
 @Composable
 fun animeDetailsScreen(
-    show: AnikotoShow,
-    episodes: List<AnikotoEpisode>,
+    show: MegaPlayShow,
+    episodes: List<MegaPlayEpisode>,
     selectedTranslation: String,
     onTranslationChange: (String) -> Unit,
     onBack: () -> Unit,
@@ -116,7 +116,7 @@ fun animeDetailsScreen(
 }
 
 @Composable
-private fun animeHeroSection(show: AnikotoShow, episodeCount: Int, onBack: () -> Unit) {
+private fun animeHeroSection(show: MegaPlayShow, episodeCount: Int, onBack: () -> Unit) {
     Box(modifier = Modifier.fillMaxWidth().height(400.dp)) {
         // Backdrop Image
         AsyncImage(

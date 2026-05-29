@@ -7,8 +7,8 @@ import com.streamzee.data.NetworkClient
 import com.streamzee.data.PlaybackSource
 import com.streamzee.data.TmdbMovie
 import com.streamzee.data.TmdbEpisode
-import com.streamzee.data.AnikotoShow
-import com.streamzee.data.AnikotoEpisode
+import com.streamzee.data.MegaPlayShow
+import com.streamzee.data.MegaPlayEpisode
 import com.streamzee.repository.StreamzeeRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -40,9 +40,9 @@ sealed interface Screen {
         val tvEpisode: Int? = null,
         val resumePositionMs: Long? = null,
     ) : Screen
-    data class AnimeDetails(val show: AnikotoShow) : Screen
+    data class AnimeDetails(val show: MegaPlayShow) : Screen
     data class AnimePlayer(
-        val show: AnikotoShow,
+        val show: MegaPlayShow,
         val episode: Int,
         val streamUrl: String, // The resolved direct link
         val translationType: String = "sub",
@@ -78,7 +78,7 @@ data class MainUiState(
     val searchMode: SearchMode = SearchMode.MOVIES,
     val searchQuery: String = "",
     val searchResults: List<TmdbMovie> = emptyList(),
-    val animeSearchResults: List<AnikotoShow> = emptyList(),
+    val animeSearchResults: List<MegaPlayShow> = emptyList(),
     val isLoading: Boolean = false,
     val isSearching: Boolean = false,
     val isLoadingSaved: Boolean = false,
@@ -112,7 +112,7 @@ data class MainUiState(
     val storageUsedGb: Double = 45.6,
     val storageTotalGb: Double = 128.0,
     val selectedTranslationType: String = "sub", // Added
-    val animeEpisodes: List<AnikotoEpisode> = emptyList() // Added
+    val animeEpisodes: List<MegaPlayEpisode> = emptyList() // Added
 )
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
@@ -354,11 +354,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun openAnimeDetails(show: AnikotoShow) {
+    fun openAnimeDetails(show: MegaPlayShow) {
         // Generate the list of episodes locally based on Jikan's total count
         val totalEpisodes = show.episodeCount ?: 1
         val generatedEpisodes = (1..totalEpisodes).map { 
-            AnikotoEpisode(number = it, episodeEmbedId = "") // Embed ID is empty because we use MAL ID
+            MegaPlayEpisode(number = it, episodeEmbedId = "") // Embed ID is empty because we use MAL ID
         }
 
         _uiState.update { state ->
@@ -371,7 +371,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun playAnime(show: AnikotoShow, episodeNumber: Int) {
+    fun playAnime(show: MegaPlayShow, episodeNumber: Int) {
         val language = _uiState.value.selectedTranslationType // "sub" or "dub"
         
         // MEGA-PLAY MAL ENDPOINT: /stream/mal/{mal-id}/{ep-num}/{language}

@@ -3,9 +3,9 @@ package com.streamzee.repository
 import android.content.Context
 import com.streamzee.data.AppDataStore
 import com.streamzee.data.TmdbApi
-import com.streamzee.data.AnikotoShow
-import com.streamzee.data.AnikotoSeriesResponse
-import com.streamzee.data.AnikotoEpisode
+import com.streamzee.data.MegaPlayShow
+import com.streamzee.data.MegaPlaySeriesResponse
+import com.streamzee.data.MegaPlayEpisode
 import com.streamzee.data.TmdbMovie
 import com.streamzee.data.TmdbSeasonResponse
 import kotlinx.coroutines.async
@@ -234,10 +234,10 @@ class StreamzeeRepository(
         AppDataStore.saveWatchProgress(context, movieId, positionMs, season, episode)
     }
 
-    suspend fun searchAnime(query: String): List<AnikotoShow> = withContext(Dispatchers.IO) {
+    suspend fun searchAnime(query: String): List<MegaPlayShow> = withContext(Dispatchers.IO) {
         val jikanResults = api.searchJikan(query)
         jikanResults.data.map { 
-            AnikotoShow(
+            MegaPlayShow(
                 animeMalID = it.malId.toString(),
                 title = it.title,
                 image = it.images.jpg.imageUrl,

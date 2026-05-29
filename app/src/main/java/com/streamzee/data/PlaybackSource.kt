@@ -64,8 +64,8 @@ val playerSources = listOf(
         ),
     ),
     PlaybackSource(
-        id = "anikoto",
-        label = "Anikoto",
+        id = "megaplay",
+        label = "MegaPlay",
         tag = "ANIME",
         supportsProgress = true,
         async = true,

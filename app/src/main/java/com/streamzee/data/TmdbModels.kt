@@ -43,12 +43,12 @@ data class TmdbEpisode(
     @SerializedName("runtime") val runtime: Int? = null
 )
 
-// Updated Anime Model for Anikoto
-data class AnikotoSearchResponse(
-    val results: List<AnikotoShow> = emptyList()
+// Updated Anime Model for MegaPlay
+data class MegaPlaySearchResponse(
+    val results: List<MegaPlayShow> = emptyList()
 )
 
-data class AnikotoShow(
+data class MegaPlayShow(
     val animeMalID: String, // This stores the mal_id from Jikan
     val title: String,
     val image: String?,
@@ -61,13 +61,13 @@ data class AnikotoShow(
     val thumbnail: String? get() = image
 }
 
-data class AnikotoSeriesResponse(
+data class MegaPlaySeriesResponse(
     val id: String,
     val title: String,
-    val episodes: List<AnikotoEpisode> = emptyList()
+    val episodes: List<MegaPlayEpisode> = emptyList()
 )
 
-data class AnikotoEpisode(
+data class MegaPlayEpisode(
     val number: Int,
     // Use SerializedName to match the API's snake_case key
     @SerializedName("episode_embed_id") val episodeEmbedId: String 

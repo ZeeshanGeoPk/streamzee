@@ -27,7 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.streamzee.data.TmdbMovie
-import com.streamzee.data.AnikotoShow
+import com.streamzee.data.MegaPlayShow
 import com.streamzee.viewmodel.SearchMode
 
 private const val TMDB_IMAGE_W500 = "https://image.tmdb.org/t/p/w500"
@@ -41,12 +41,12 @@ fun searchScreen(
     query: String,
     searchMode: SearchMode,
     searchResults: List<TmdbMovie>,
-    animeSearchResults: List<AnikotoShow>,
+    animeSearchResults: List<MegaPlayShow>,
     onQueryChange: (String) -> Unit,
     onSearchSubmit: (String) -> Unit,
     onModeSelected: (SearchMode) -> Unit,
     onMovieClicked: (TmdbMovie) -> Unit,
-    onAnimeClicked: (AnikotoShow) -> Unit,
+    onAnimeClicked: (MegaPlayShow) -> Unit,
     onBack: () -> Unit,
     isSearching: Boolean,
     errorMessage: String?,
@@ -253,7 +253,7 @@ private fun emptyStateMessage(message: String) {
 }
 
 @Composable
-private fun animeResultCardPremium(show: AnikotoShow, onClick: () -> Unit) {
+private fun animeResultCardPremium(show: MegaPlayShow, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()

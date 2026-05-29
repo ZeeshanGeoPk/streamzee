@@ -31,11 +31,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import com.streamzee.data.AnikotoShow
+import com.streamzee.data.MegaPlayShow
 
 @Composable
 fun animePlayerScreen(
-    show: AnikotoShow,
+    show: MegaPlayShow,
     episode: Int,
     streamUrl: String,
     onBack: () -> Unit,
