@@ -46,23 +46,7 @@ val playerSources = listOf(
             { id, season, episode -> "https://www.vidsrc.to/embed/tv/$id/$season/$episode" },
         ),
     ),
-    PlaybackSource(
-        id = "2embed",
-        label = "2Embed",
-        note = "unstable",
-        supportsProgress = true,
-        progressViaFrames = true,
-        movieUrl = { id -> "https://www.2embed.online/embed/movie/$id" },
-        movieUrlCandidates = listOf(
-            { id -> "https://www.2embed.online/embed/movie/$id" },
-            { id -> "https://2embed.to/embed/movie/$id" },
-        ),
-        tvUrl = { id, season, episode -> "https://www.2embed.online/embed/tv/$id/$season/$episode" },
-        tvUrlCandidates = listOf(
-            { id, season, episode -> "https://www.2embed.online/embed/tv/$id/$season/$episode" },
-            { id, season, episode -> "https://2embed.to/embed/tv/$id/$season/$episode" },
-        ),
-    ),
+
     PlaybackSource(
         id = "megaplay",
         label = "MegaPlay",
