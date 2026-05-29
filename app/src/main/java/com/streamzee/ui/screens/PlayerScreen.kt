@@ -314,16 +314,15 @@ fun playerScreen(
                         )
 
                     settings.apply {
-
                         javaScriptEnabled = true
-
                         domStorageEnabled = true
-
                         mediaPlaybackRequiresUserGesture = false
-
                         loadWithOverviewMode = true
-
                         useWideViewPort = true
+                        
+                        // --- NEW BLOCKERS ---
+                        setSupportMultipleWindows(true) // Required to intercept window.open calls
+                        javaScriptCanOpenWindowsAutomatically = false
 
                         builtInZoomControls = false
 
@@ -337,6 +336,16 @@ fun playerScreen(
 
                     webChromeClient =
                         object : WebChromeClient() {
+                            
+                            override fun onCreateWindow(
+                                    view: WebView?,
+                                    isDialog: Boolean,
+                                    isUserGesture: Boolean,
+                                    resultMsg: android.os.Message?
+                                ): Boolean {
+                                    // Kill any attempt to open a new window (popups)
+                                    return false 
+                                }
 
                             private var customView: View? = null
 
