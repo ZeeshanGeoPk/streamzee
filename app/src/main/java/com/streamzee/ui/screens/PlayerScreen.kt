@@ -1,5 +1,17 @@
 package com.streamzee.ui.screens
 
+import androidx.compose.ui.platform.LocalContext
+import android.app.Activity
+import android.content.pm.ActivityInfo
+import android.view.ViewGroup
+import android.widget.FrameLayout
+import android.webkit.PermissionRequest
+import android.webkit.SslErrorHandler
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
+import android.view.View
+import android.webkit.WebSettings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -63,6 +75,12 @@ fun playerScreen(
     tvEpisode: Int? = null,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
+    val activity = remember(context) {
+    context as Activity
+    }
+    var isFullScreen by remember { mutableStateOf(false) }
+    
     val allPrioritySources = remember { playerSources }
     val startSourceIndex = remember(source) {
         allPrioritySources.indexOfFirst { it.id == source.id }.takeIf { it >= 0 } ?: 0
@@ -172,99 +190,213 @@ fun playerScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-            
-            LaunchedEffect(webViewRef.value) {
-                while (true) {
-                    kotlinx.coroutines.delay(5.seconds) // Poll every 5 seconds
-                    webViewRef.value?.evaluateJavascript(
-                            """
-                            (function() {
-                                var v = document.querySelector('video');
-                                if (v) return v.currentTime;
-                                
-                                // Try searching inside iframes (might be blocked, but worth a shot)
-                                var iframes = document.getElementsByTagName('iframe');
-                                for (var i = 0; i < iframes.length; i++) {
-                                    try {
-                                        var iv = iframes[i].contentWindow.document.querySelector('video');
-                                        if (iv) return iv.currentTime;
-                                    } catch(e) {}
-                                }
-                                return 0;
-                            })();
-                            """.trimIndent()
-                        ) { result ->
-                            // The result often comes wrapped in quotes like "120.5"
-                            val cleanedResult = result.replace("\"", "")
-                            val seconds = cleanedResult.toDoubleOrNull() ?: 0.0
-                            if (seconds > 0) {
-                                lastKnownPosition = (seconds * 1000).toLong()
-                            }
-                        }
-                }
-            }
         
         AndroidView(
-                factory = { ctx ->
-                    WebView(ctx).apply {
-                        settings.apply {
-                            javaScriptEnabled = true
-                            domStorageEnabled = true
-                            mediaPlaybackRequiresUserGesture = false
-                            javaScriptCanOpenWindowsAutomatically = false
-                            setSupportMultipleWindows(false)
-                        }
-                        webChromeClient = object : WebChromeClient() {
-                            override fun onCreateWindow(
-                                view: WebView?,
-                                isDialog: Boolean,
-                                isUserGesture: Boolean,
-                                resultMsg: Message?,
-                            ): Boolean {
-                                return false
-                            }
-                        }
-                        webViewClient = object : WebViewClient() {
-                            override fun shouldInterceptRequest(
-                                view: WebView,
-                                request: WebResourceRequest,
-                            ): WebResourceResponse? {
-                                val url = request.url.toString()
-                                if (shouldBlockUrl(url)) {
-                                    return WebResourceResponse("text/plain", "utf-8", null)
-                                }
-                                return super.shouldInterceptRequest(view, request)
-                            }
+            factory = { ctx ->
 
-                            override fun onReceivedError(
-                                view: WebView,
-                                request: WebResourceRequest,
-                                error: WebResourceError,
-                            ) {
-                                if (request.isForMainFrame) {
-                                    tryNextCandidateOrSource(view)
-                                }
-                            }
+                WebView(ctx).apply {
 
-                            override fun onReceivedHttpError(
-                                view: WebView,
-                                request: WebResourceRequest,
-                                errorResponse: WebResourceResponse,
-                            ) {
-                                if (request.isForMainFrame && errorResponse.statusCode >= 400) {
-                                    tryNextCandidateOrSource(view)
-                                }
-                            }
-                        }
-                        loadUrl(currentUrl)
+                    webViewRef.value = this
+
+                    overScrollMode = View.OVER_SCROLL_NEVER
+
+                    setBackgroundColor(android.graphics.Color.BLACK)
+
+                    layoutParams = FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+
+                    settings.apply {
+
+                        javaScriptEnabled = true
+                        domStorageEnabled = true
+
+                        mediaPlaybackRequiresUserGesture = false
+
+                        loadWithOverviewMode = true
+                        useWideViewPort = true
+
+                        builtInZoomControls = false
+                        displayZoomControls = false
+                        setSupportZoom(false)
+
+                        mixedContentMode =
+                            WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                     }
-                },
-                    update = { webView -> webView.loadUrl(currentUrl) },
-                    modifier = Modifier.fillMaxSize() // Fill full screen
-            )
+
+                    webChromeClient = object : WebChromeClient() {
+
+                        private var customView: View? = null
+                        private var customViewCallback: CustomViewCallback? = null
+
+                        override fun onPermissionRequest(
+                            request: PermissionRequest
+                        ) {
+                            request.grant(request.resources)
+                        }
+
+                        override fun onShowCustomView(
+                            view: View?,
+                            callback: CustomViewCallback?
+                        ) {
+
+                            if (customView != null) {
+                                callback?.onCustomViewHidden()
+                                return
+                            }
+
+                            customView = view
+                            customViewCallback = callback
+
+                            val decorView =
+                                activity.window.decorView as FrameLayout
+
+                            decorView.addView(
+                                customView,
+                                FrameLayout.LayoutParams(
+                                    ViewGroup.LayoutParams.MATCH_PARENT,
+                                    ViewGroup.LayoutParams.MATCH_PARENT
+                                )
+                            )
+
+                            WindowCompat.setDecorFitsSystemWindows(
+                                activity.window,
+                                false
+                            )
+
+                            val controller =
+                                WindowInsetsControllerCompat(
+                                    activity.window,
+                                    decorView
+                                )
+
+                            controller.hide(
+                                WindowInsetsCompat.Type.systemBars()
+                            )
+
+                            controller.systemBarsBehavior =
+                                WindowInsetsControllerCompat
+                                    .BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+
+                            isFullScreen = true
+
+                            activity.requestedOrientation =
+                                ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                        }
+
+                        override fun onHideCustomView() {
+
+                            val decorView =
+                                activity.window.decorView as FrameLayout
+
+                            customView?.let {
+                                decorView.removeView(it)
+                            }
+
+                            customView = null
+
+                            WindowCompat.setDecorFitsSystemWindows(
+                                activity.window,
+                                true
+                            )
+
+                            WindowInsetsControllerCompat(
+                                activity.window,
+                                decorView
+                            ).show(
+                                WindowInsetsCompat.Type.systemBars()
+                            )
+
+                            customViewCallback?.onCustomViewHidden()
+                            customViewCallback = null
+
+                            isFullScreen = false
+
+                            activity.requestedOrientation =
+                                ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                        }
+                    }
+
+                    webViewClient = object : WebViewClient() {
+
+                    override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                        return false
+                    }
+
+                        override fun shouldInterceptRequest(
+                            view: WebView,
+                            request: WebResourceRequest
+                        ): WebResourceResponse? {
+
+                            val url = request.url.toString()
+
+                            if (shouldBlockUrl(url)) {
+                                return WebResourceResponse(
+                                    "text/plain",
+                                    "utf-8",
+                                    null
+                                )
+                            }
+
+                            return super.shouldInterceptRequest(
+                                view,
+                                request
+                            )
+                        }
+
+                        override fun onReceivedSslError(
+                            view: WebView?,
+                            handler: SslErrorHandler?,
+                            error: android.net.http.SslError?
+                        ) {
+                            handler?.proceed()
+                        }
+
+                        override fun onReceivedError(
+                            view: WebView,
+                            request: WebResourceRequest,
+                            error: WebResourceError
+                        ) {
+
+                            if (request.isForMainFrame) {
+                                tryNextCandidateOrSource(view)
+                            }
+                        }
+
+                        override fun onReceivedHttpError(
+                            view: WebView,
+                            request: WebResourceRequest,
+                            errorResponse: WebResourceResponse
+                        ) {
+
+                            if (
+                                request.isForMainFrame &&
+                                errorResponse.statusCode >= 400
+                            ) {
+                                tryNextCandidateOrSource(view)
+                            }
+                        }
+                    }
+
+                    loadUrl(currentUrl)
+                }
+            },
+
+            update = { webView ->
+
+                if (webView.url != currentUrl) {
+                    webView.loadUrl(currentUrl)
+                }
+            },
+
+            modifier = Modifier.fillMaxSize()
+        )
             
-                // Cinematic Overlay (Title and Back Button)
-        Row(
+        // Cinematic Overlay (Title and Back Button)
+        
+        if (!isFullScreen) {        
+            Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .statusBarsPadding()
@@ -273,7 +405,23 @@ fun playerScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(
-                onClick = onBack,
+                onClick = {
+
+                    if (isFullScreen) {
+
+                        webViewRef.value
+                            ?.webChromeClient
+                            ?.onHideCustomView()
+
+                    } else {
+
+                        activity.requestedOrientation =
+                            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+
+                        onBack()
+                    }
+                },
+                    
                 modifier = Modifier.background(Color.Black.copy(0.5f), CircleShape)
             ) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = Color.White)
@@ -284,6 +432,7 @@ fun playerScreen(
                     if (isTvPlayback) {
                     Text("S$tvSeason E$tvEpisode", color = Purple, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
+                }
             }
         }
     }
