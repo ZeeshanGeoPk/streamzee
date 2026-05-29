@@ -17,6 +17,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
@@ -529,7 +530,19 @@ fun playerScreen(
                 }
             },
 
-            modifier = Modifier.fillMaxSize()
+                        modifier =
+                            if (isFullScreen) {
+
+                                Modifier.fillMaxSize()
+
+                            } else {
+
+                                Modifier
+                                    .fillMaxWidth()
+                                    .aspectRatio(16f / 9f)
+                                    // Center Vertical Allignment
+                                    .align(Alignment.Center)
+                            }
         )
 
         if (!isFullScreen) {
