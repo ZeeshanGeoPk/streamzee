@@ -113,8 +113,7 @@ Your support helps me:
 
 ### Support the Project
 
-* [Patreon Post](https://www.patreon.com/posts/streamzee-free-159437752): https://www.patreon.com/posts/streamzee-free-159437752
-* [Patreon Page](https://www.patreon.com/cw/zeeshanoo): https://www.patreon.com/cw/zeeshanoo
+* [My Patreon Shop](https://www.patreon.com/cw/zeeshanoo/shop): https://www.patreon.com/cw/zeeshanoo/shop
 
 Every contribution, no matter the size, helps keep the project moving forward. Thank you for supporting independent open-source development ❤️
 
