@@ -61,33 +61,6 @@ val playerSources = listOf(
         )
     ),
         
-        
-PlaybackSource(
-    contentType = PlaybackContentType.MOVIE_TV,
-    id = "multiembed",
-    label = "MultiEmbed",
-    supportsProgress = false,
-
-    movieUrl = { id ->
-        "https://multiembed.mov/?video_id=$id&tmdb=1"
-    },
-
-    movieUrlCandidates = listOf {
-         id ->
-            "https://multiembed.mov/?video_id=$id&tmdb=1"
-        },
-
-    tvUrl = { id, season, episode ->
-        "https://multiembed.mov/?video_id=$id&tmdb=1&s=$season&e=$episode"
-    },
-
-    tvUrlCandidates = listOf {
-         id, season, episode ->
-            "https://multiembed.mov/?video_id=$id&tmdb=1&s=$season&e=$episode"
-        }
-),
-        
-
     PlaybackSource(
         contentType = PlaybackContentType.MOVIE_TV,
 
@@ -123,6 +96,31 @@ PlaybackSource(
             }
         )
     ),
+            
+    PlaybackSource(
+    contentType = PlaybackContentType.MOVIE_TV,
+    id = "multiembed",
+    label = "MultiEmbed",
+    supportsProgress = false,
+
+    movieUrl = { id ->
+        "https://multiembed.mov/?video_id=$id&tmdb=1"
+    },
+
+    movieUrlCandidates = listOf {
+         id ->
+            "https://multiembed.mov/?video_id=$id&tmdb=1"
+        },
+
+    tvUrl = { id, season, episode ->
+        "https://multiembed.mov/?video_id=$id&tmdb=1&s=$season&e=$episode"
+    },
+
+    tvUrlCandidates = listOf {
+         id, season, episode ->
+            "https://multiembed.mov/?video_id=$id&tmdb=1&s=$season&e=$episode"
+        }
+),
 
     // =========================
     // ANIME SOURCES

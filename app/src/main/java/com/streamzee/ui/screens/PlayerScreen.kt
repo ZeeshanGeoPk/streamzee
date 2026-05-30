@@ -29,9 +29,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import android.webkit.WebChromeClient
-import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
-import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.layout.Column
@@ -40,18 +38,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.height
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -83,11 +72,10 @@ fun playerScreen(
 ) {
 
     val context = LocalContext.current
-
     val activity = remember(context) {
         context as Activity
     }
-
+    
     var isFullScreen by remember {
         mutableStateOf(false)
     }
@@ -168,126 +156,6 @@ fun playerScreen(
             mutableStateOf<WebView?>(null)
         }
 
-    fun shouldBlockUrl(url: String): Boolean {
-
-        val blockedPatterns = listOf(
-            "google-analytics.com",
-            "googletagmanager.com",
-            "googletagservices.com",
-            "doubleclick.net",
-            "adservice.google",
-            "pagead2.googlesyndication.com",
-            "stats.g.doubleclick.net",
-            "yt3.ggpht.com/ytc",
-            "fonts.googleapis.com",
-            "fonts.gstatic.com",
-            "googleapis.com",
-            "gstatic.com",
-            "cdn.adx1.com",
-            "intelligenceadx.com",
-            "adsco.re",
-            "mc.yandex",
-            "bvtpk.com",
-            "my.rtmark.net",
-            "b7510.com",
-            "gt.unbrownunflat.com",
-            "im.malocacomals.com",
-            "users.videasy.net",
-            "nf.sixmossin.com",
-            "realizationnewestfangs.com",
-            "acscdn.com",
-            "lt.taloseempest.com",
-            "profitableratecpm.com",
-            "preferencenail.com",
-            "protrafficinspector.com",
-            "s10.histats.com",
-            "weirdopt.com",
-            "cloudflareinsights.com",
-            "kettledroopingcontinuation.com",
-            "wayfarerorthodox.com",
-            "woxaglasuy.net",
-            "adeptspiritual.com",
-            "calculating-laugh.com",
-            "amavhxdlofklxjg.xyz",
-            "u3qleufcm6vure326ktfpbj.cfd",
-            "get64t9vqg8pnbex1y463o.rest",
-            "usrpubtrk.com",
-            "adexchangeclear.com",
-            "rzjzjnavztycv.online",
-            "cloudnestra.com",
-            "neonhorizonworkshops.com",
-            "popads",
-            "popunder",
-            "adclick",
-            "googlesyndication.com",
-            "amazon-adsystem.com",
-            "adsystem.com",
-            "facebook.net",
-            "tracker",
-            "analytics",
-            "popunder"
-        )
-
-        return blockedPatterns.any {
-            url.contains(it, ignoreCase = true)
-        }
-    }
-
-    fun tryNextCandidateOrSource(webView: WebView) {
-
-        if (currentCandidateIndex + 1 < candidateUrls.size) {
-
-            currentCandidateIndex += 1
-
-            val nextUrl =
-                candidateUrls[currentCandidateIndex]
-
-            webView.loadUrl(nextUrl)
-
-            return
-        }
-
-        if (currentSourceIndex + 1 < allPrioritySources.size) {
-
-            currentSourceIndex += 1
-
-            currentCandidateIndex = 0
-
-            val nextSource =
-                allPrioritySources[currentSourceIndex]
-
-            val nextCandidates =
-                if (isTvPlayback) {
-
-                    nextSource.tvUrlCandidates
-                        .ifEmpty {
-                            listOf(nextSource.tvUrl)
-                        }
-                        .map {
-                            it(
-                                movie.tmdbID.toString(),
-                                tvSeason,
-                                tvEpisode
-                            )
-                        }
-
-                } else {
-
-                    nextSource.movieUrlCandidates
-                        .ifEmpty {
-                            listOf(nextSource.movieUrl)
-                        }
-                        .map {
-                            it(movie.tmdbID.toString())
-                        }
-                }
-
-            if (nextCandidates.isNotEmpty()) {
-                webView.loadUrl(nextCandidates[0])
-            }
-        }
-    }
-
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -295,19 +163,13 @@ fun playerScreen(
     ) {
 
         AndroidView(
-
             factory = { ctx ->
-
                 WebView(ctx).apply {
-
                     webViewRef.value = this
-
                     overScrollMode = View.OVER_SCROLL_NEVER
-
                     setBackgroundColor(
-                        android.graphics.Color.BLACK
+                        android.graphics.Color.WHITE
                     )
-
                     layoutParams =
                         FrameLayout.LayoutParams(
                             ViewGroup.LayoutParams.MATCH_PARENT,
@@ -320,15 +182,13 @@ fun playerScreen(
                         mediaPlaybackRequiresUserGesture = false
                         loadWithOverviewMode = true
                         useWideViewPort = true
+                        userAgentString = "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36"
                         
                         // --- NEW BLOCKERS ---
                         setSupportMultipleWindows(true) // Required to intercept window.open calls
                         javaScriptCanOpenWindowsAutomatically = false
-
                         builtInZoomControls = false
-
                         displayZoomControls = false
-
                         setSupportZoom(false)
 
                         mixedContentMode =
@@ -337,19 +197,8 @@ fun playerScreen(
 
                     webChromeClient =
                         object : WebChromeClient() {
-                            
-                            override fun onCreateWindow(
-                                    view: WebView?,
-                                    isDialog: Boolean,
-                                    isUserGesture: Boolean,
-                                    resultMsg: android.os.Message?
-                                ): Boolean {
-                                    // Kill any attempt to open a new window (popups)
-                                    return false 
-                                }
 
                             private var customView: View? = null
-
                             private var customViewCallback:
                                     CustomViewCallback? = null
 
@@ -462,60 +311,12 @@ fun playerScreen(
                                 return false
                             }
 
-                            override fun shouldInterceptRequest(
-                                view: WebView,
-                                request: WebResourceRequest
-                            ): WebResourceResponse? {
-
-                                val url =
-                                    request.url.toString()
-
-                                if (shouldBlockUrl(url)) {
-
-                                    return WebResourceResponse(
-                                        "text/plain",
-                                        "utf-8",
-                                        null
-                                    )
-                                }
-
-                                return super.shouldInterceptRequest(
-                                    view,
-                                    request
-                                )
-                            }
-
                             override fun onReceivedSslError(
                                 view: WebView?,
                                 handler: SslErrorHandler?,
                                 error: android.net.http.SslError?
                             ) {
                                 handler?.proceed()
-                            }
-
-                            override fun onReceivedError(
-                                view: WebView,
-                                request: WebResourceRequest,
-                                error: WebResourceError
-                            ) {
-
-                                if (request.isForMainFrame) {
-                                    tryNextCandidateOrSource(view)
-                                }
-                            }
-
-                            override fun onReceivedHttpError(
-                                view: WebView,
-                                request: WebResourceRequest,
-                                errorResponse: WebResourceResponse
-                            ) {
-
-                                if (
-                                    request.isForMainFrame &&
-                                    errorResponse.statusCode >= 400
-                                ) {
-                                    tryNextCandidateOrSource(view)
-                                }
                             }
                         }
 
