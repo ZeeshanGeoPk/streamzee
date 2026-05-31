@@ -167,12 +167,25 @@ fun streamzeeApp(viewModel: MainViewModel) {
                         savedMovies = uiState.savedMovies,
                         savedAnime = uiState.savedAnime,
                         savedIds = uiState.savedIds,
-                        onMovieClicked = viewModel::openDetails,
-                        onRemove = { id, type -> viewModel.toggleSaved("${type}_$id") },
-                        onBack = viewModel::openHome,
                         isLoading = uiState.isLoadingSaved,
                         errorMessage = uiState.errorMessage,
-                        modifier = contentModifier,
+                        onBack = { viewModel.openHome() },
+                        onMovieClicked = { viewModel.openDetails(it) },
+                        onAnimeClicked = { anime ->
+                            // Convert the library object back to the Details-compatible object
+                            viewModel.openAnimeDetails(
+                                com.streamzee.data.MegaPlayShow(
+                                    animeMalID = anime.malId.toString(),
+                                    title = anime.title,
+                                    image = anime.images.jpg.imageUrl,
+                                    animeType = anime.type,
+                                    episodeCount = anime.episodes ?: 0,
+                                    score = anime.score?.toString() ?: "N/A"
+                                )
+                            )
+                        },
+                        onRemove = { id, type -> viewModel.toggleSaved("${type}_$id") },
+                        modifier = contentModifier
                     )
                     is Screen.Downloads -> downloadsScreen(
                         uiState = uiState,

@@ -43,6 +43,7 @@ fun libraryScreen(
     savedAnime: List<JikanAnime>,
     savedIds: Set<String>,
     onMovieClicked: (TmdbMovie) -> Unit,
+    onAnimeClicked: (JikanAnime) -> Unit,
     onRemove: (String, String) -> Unit,
     onBack: () -> Unit,
     isLoading: Boolean,
@@ -238,7 +239,7 @@ fun libraryScreen(
                             is WatchlistItem.Anime -> {
                                 animeWatchlistCard(
                                     anime = item.data,
-                                    onClick = { /* open anime details */ },
+                                    onClick = { onAnimeClicked(item.data) },
                                     onRemove = { 
                                         onRemove(item.data.malId.toString(), "anime") 
                                     }
