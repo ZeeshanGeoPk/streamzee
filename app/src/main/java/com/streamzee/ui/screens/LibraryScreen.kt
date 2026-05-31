@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.automirrored.filled.Sort
 import coil.compose.AsyncImage
 import com.streamzee.data.TmdbMovie
+import com.streamzee.data.JikanAnime
 
 private const val TMDB_IMAGE_W500 = "https://image.tmdb.org/t/p/w500"
 private val Purple = Color(0xFFA855F7)
@@ -31,12 +32,18 @@ private val CardBg = Color(0xFF161622)
 private val TextSec = Color(0xFF8E8E9F)
 private val ScreenBg = Color(0xFF050508)
 
+sealed class WatchlistItem {
+    data class Movie(val data: TmdbMovie) : WatchlistItem()
+    data class Anime(val data: JikanAnime) : WatchlistItem()
+}
+
 @Composable
 fun libraryScreen(
     savedMovies: List<TmdbMovie>,
+    savedAnime: List<JikanAnime>,
     savedIds: Set<String>,
     onMovieClicked: (TmdbMovie) -> Unit,
-    onRemove: (String) -> Unit,
+    onRemove: (String, String) -> Unit,
     onBack: () -> Unit,
     isLoading: Boolean,
     errorMessage: String?,
@@ -146,7 +153,7 @@ fun libraryScreen(
         }
 
         // ── Empty State ──────────────────────────────────────
-        if (savedMovies.isEmpty() && !isLoading) {
+        if (savedMovies.isEmpty() && savedAnime.isEmpty() && !isLoading) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -184,31 +191,59 @@ fun libraryScreen(
         }
 
         // ── Content List ─────────────────────────────────────
-        val filteredMovies = remember(savedMovies, selectedFilter) {
-            when (selectedFilter) {
-                "Movies" -> savedMovies.filter { it.mediaType == "movie" }
-                "TV Shows" -> savedMovies.filter { it.mediaType == "tv" }
-                "Anime" -> savedMovies.filter {
-                    it.genreIds?.contains(16) == true ||
-                    it.displayTitle.contains("anime", ignoreCase = true)
-                }
-                else -> savedMovies
-            }
+        val allItems = remember(savedMovies, savedAnime) {
+            savedMovies.map { WatchlistItem.Movie(it) } +
+            savedAnime.map { WatchlistItem.Anime(it) }
         }
 
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = PaddingValues(vertical = 8.dp)
-        ) {
-            items(filteredMovies) { movie ->
-                watchlistCard(
-                    movie = movie,
-                    onClick = { onMovieClicked(movie) },
-                    onRemove = { onRemove(movie.tmdbID.toString()) }
-                )
+        val filteredItems = remember(allItems, selectedFilter) {
+            when (selectedFilter) {
+                "Movies" -> allItems.filterIsInstance<WatchlistItem.Movie>()
+
+                "TV Shows" -> allItems.filterIsInstance<WatchlistItem.Movie>()
+                    .filter { it.data.mediaType == "tv" }
+
+                "Anime" -> allItems.filterIsInstance<WatchlistItem.Anime>()
+
+                else -> allItems
+            }
+        }
+        
+        Text(
+    "Movies: ${savedMovies.size} Anime: ${savedAnime.size}",
+    color = Color.Red
+)
+
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(vertical = 8.dp)
+            ) {
+                items(filteredItems) { item ->
+                        when (item) {
+
+                            is WatchlistItem.Movie -> {
+                                watchlistCard(
+                                    movie = item.data,
+                                    onClick = { onMovieClicked(item.data) },
+                                    onRemove = { 
+                                            onRemove(item.data.tmdbID.toString(), if (item.data.isTv) "tv" else "movie") 
+                                        }
+                                )
+                            }
+
+                            is WatchlistItem.Anime -> {
+                                animeWatchlistCard(
+                                    anime = item.data,
+                                    onClick = { /* open anime details */ },
+                                    onRemove = { 
+                                        onRemove(item.data.malId.toString(), "anime") 
+                                    }
+                                )
+                            }
+                        }
             }
         }
     }
@@ -230,6 +265,96 @@ private fun watchlistStatChip(
     ) {
         Icon(icon, null, tint = Purple, modifier = Modifier.size(16.dp))
         Text(label, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+    }
+}
+
+@Composable
+private fun animeWatchlistCard(
+    anime: JikanAnime,
+    onClick: () -> Unit,
+    onRemove: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(CardBg)
+            .clickable(onClick = onClick)
+            .padding(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+
+        // Poster
+        Box(
+            modifier = Modifier
+                .size(width = 70.dp, height = 100.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color(0xFF2C2C3E))
+        ) {
+            AsyncImage(
+                model = anime.images.jpg.imageUrl,
+                contentDescription = anime.title,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        }
+
+        // Info
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                anime.title,
+                color = Color.White,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(Purple.copy(alpha = 0.15f))
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        "ANIME",
+                        color = Purple,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Text(
+                    anime.type ?: "",
+                    color = TextSec,
+                    fontSize = 12.sp
+                )
+
+                Text(
+                    "⭐ ${anime.score ?: "N/A"}",
+                    color = Color.White,
+                    fontSize = 12.sp
+                )
+            }
+        }
+
+        // Remove button
+        IconButton(onClick = onRemove) {
+            Icon(
+                Icons.Default.Delete,
+                contentDescription = "Remove",
+                tint = Color(0xFFEF4444)
+            )
+        }
     }
 }
 

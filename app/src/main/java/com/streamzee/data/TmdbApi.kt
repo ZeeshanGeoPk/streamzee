@@ -56,4 +56,9 @@ interface TmdbApi {
     // 1. Search via Jikan
     @GET("https://api.jikan.moe/v4/anime")
     suspend fun searchJikan(@Query("q") query: String): JikanSearchResponse
+    
+    @GET("https://api.jikan.moe/v4/anime/{anime_id}")
+    suspend fun getAnimeById(
+        @Path("anime_id") animeId: Int
+    ): JikanAnimeResponse
 }

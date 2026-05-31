@@ -202,7 +202,10 @@ private fun actionButtonsSection(
 
         // --- WATCHLIST BUTTON ---
         OutlinedButton(
-            onClick = { onToggleSave(movie.tmdbID.toString()) },
+            onClick = { 
+                    val prefix = if (movie.isTv) "tv_" else "movie_"
+                    onToggleSave("$prefix${movie.tmdbID}") 
+                },
             modifier = Modifier.fillMaxWidth().height(50.dp),
             shape = RoundedCornerShape(8.dp),
             border = BorderStroke(1.dp, if (isSaved) Purple else Color.Gray)

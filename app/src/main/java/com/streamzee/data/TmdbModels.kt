@@ -94,3 +94,7 @@ data class JikanImages(
 data class JikanImageUrls(
     @SerializedName("image_url") val imageUrl: String
 )
+
+data class JikanAnimeResponse(
+    val data: JikanAnime
+)

@@ -141,7 +141,9 @@ fun streamzeeApp(viewModel: MainViewModel) {
                         onSearchClicked = viewModel::openSearch,
                         onLibraryClicked = viewModel::openLibrary,
                         onMovieClicked = viewModel::openDetails,
-                        onToggleSave = viewModel::toggleSaved,
+                        onToggleSave = { id ->
+                            viewModel.toggleSaved(id)
+                        },
                         isLoading = uiState.isLoading,
                         errorMessage = uiState.errorMessage,
                         modifier = contentModifier,
@@ -163,9 +165,10 @@ fun streamzeeApp(viewModel: MainViewModel) {
                     )
                     is Screen.Library -> libraryScreen(
                         savedMovies = uiState.savedMovies,
+                        savedAnime = uiState.savedAnime,
                         savedIds = uiState.savedIds,
                         onMovieClicked = viewModel::openDetails,
-                        onRemove = viewModel::toggleSaved,
+                        onRemove = { id, type -> viewModel.toggleSaved("${type}_$id") },
                         onBack = viewModel::openHome,
                         isLoading = uiState.isLoadingSaved,
                         errorMessage = uiState.errorMessage,
@@ -186,16 +189,18 @@ fun streamzeeApp(viewModel: MainViewModel) {
                         onLogout = viewModel::openHome,
                         modifier = contentModifier,
                     )
-                    is Screen.Details -> detailsScreen(
+                    is Screen.Details -> { 
+                        val movieKey = if (screen.movie.isTv) "tv_${screen.movie.tmdbID}" else "movie_${screen.movie.tmdbID}" 
+                            detailsScreen(
                         movie = screen.movie,
                         episodes = uiState.currentSeasonEpisodes,
                         lastSeason = uiState.lastWatchedSeason ?: 1,
                         lastEpisode = uiState.lastWatchedEpisode ?: 1,
                         similarMovies = uiState.trendingMovies,
                         resumePositionMs = uiState.currentMovieWatchProgressMs,
-                        isSaved = uiState.savedIds.contains(screen.movie.tmdbID.toString()),
+                        isSaved = uiState.savedIds.contains(movieKey),
                         onBack = viewModel::openHome,
-                        onToggleSave = { viewModel.toggleSaved(screen.movie.tmdbID.toString()) },
+                        onToggleSave = { viewModel.toggleSaved(it) },
                         onPlay = { id, season, episode, position -> 
                                     viewModel.openPlayer(
                                         movie = screen.movie, 
@@ -210,6 +215,7 @@ fun streamzeeApp(viewModel: MainViewModel) {
                         // onPlayEpisode = { /* ... */ },
                         modifier = contentModifier
                     )
+                        }
                     is Screen.Player -> playerScreen(
                         movie = screen.movie,
                         source = screen.source,
@@ -229,7 +235,9 @@ fun streamzeeApp(viewModel: MainViewModel) {
                         tvEpisode = screen.tvEpisode,
                         modifier = contentModifier,
                     )
-                    is Screen.AnimeDetails -> animeDetailsScreen(
+                    is Screen.AnimeDetails -> {
+                        val animeKey = "anime_${screen.show.animeID}" 
+                            animeDetailsScreen(
                         show = screen.show,
                         episodes = uiState.animeEpisodes,
                         isLoading = uiState.isLoading,
@@ -237,9 +245,12 @@ fun streamzeeApp(viewModel: MainViewModel) {
                         selectedTranslation = uiState.selectedTranslationType,
                         onTranslationChange = { viewModel.updateAnimeTranslation(it) },
                         onBack = { viewModel.openSearch() },
+                        onToggleSave = { viewModel.toggleSaved(it) },
+                        isSaved = uiState.savedIds.contains(animeKey),
                         onPlayEpisode = { epNum -> viewModel.playAnime(screen.show, epNum) },
                         modifier = contentModifier
                     )
+                        }
                     
                     is Screen.AnimePlayer -> animePlayerScreen(
                         show = screen.show,

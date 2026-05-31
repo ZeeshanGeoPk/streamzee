@@ -6,6 +6,7 @@ import com.streamzee.data.TmdbApi
 import com.streamzee.data.MegaPlayShow
 import com.streamzee.data.MegaPlaySeriesResponse
 import com.streamzee.data.MegaPlayEpisode
+import com.streamzee.data.JikanAnime
 import com.streamzee.data.TmdbMovie
 import com.streamzee.data.TmdbSeasonResponse
 import kotlinx.coroutines.async
@@ -35,11 +36,13 @@ class StreamzeeRepository(
         AppDataStore.saveApiKey(context, apiKey)
     }
 
-    suspend fun toggleSaved(movieId: String) {
+    suspend fun toggleSaved(id: String) {
         val current = AppDataStore.savedIdsFlow(context).first().toMutableSet()
-        if (!current.add(movieId)) {
-            current.remove(movieId)
+
+        if (!current.add(id)) {
+            current.remove(id)
         }
+
         AppDataStore.setSavedIds(context, current)
     }
 
@@ -246,5 +249,9 @@ class StreamzeeRepository(
                 score = it.score?.let { s -> String.format("%.1f", s) } ?: "N/A"
             )
         }
+    }
+    
+    suspend fun getAnimeById(malId: Int): JikanAnime {
+        return api.getAnimeById(malId).data
     }
 }

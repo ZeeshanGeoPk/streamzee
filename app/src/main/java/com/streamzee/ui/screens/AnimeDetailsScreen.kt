@@ -1,5 +1,7 @@
 package com.streamzee.ui.screens
 
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -40,9 +42,11 @@ fun animeDetailsScreen(
     onTranslationChange: (String) -> Unit,
     onBack: () -> Unit,
     onPlayEpisode: (Int) -> Unit,
+    onToggleSave: (String) -> Unit,
+    isSaved: Boolean,
     modifier: Modifier = Modifier,
-    isLoading: Boolean, // Ensure this is passed from uiState.isLoading
-    errorMessage: String? // Optional error message to display
+    isLoading: Boolean,
+    errorMessage: String?
 ) {
     // 1. Wrap everything in a Box to allow overlaying
     Box(modifier = modifier.fillMaxSize()) {
@@ -58,7 +62,13 @@ fun animeDetailsScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
-                    animeHeroSection(show, episodes.size ,onBack)
+                    animeHeroSection(
+                        show = show,
+                        episodeCount = episodes.size,
+                        onBack = onBack,
+                        isSaved = isSaved,
+                        onToggleSave = onToggleSave
+                    )
                 }
 
                 item(span = { GridItemSpan(maxLineSpan) }) {
@@ -116,45 +126,148 @@ fun animeDetailsScreen(
 }
 
 @Composable
-private fun animeHeroSection(show: MegaPlayShow, episodeCount: Int, onBack: () -> Unit) {
-    Box(modifier = Modifier.fillMaxWidth().height(400.dp)) {
-        // Backdrop Image
+private fun animeHeroSection(
+    show: MegaPlayShow,
+    episodeCount: Int,
+    onBack: () -> Unit,
+    isSaved: Boolean,
+    onToggleSave: (String) -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(400.dp)
+    ) {
+
         AsyncImage(
             model = show.thumbnail,
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
         )
-        // Gradient Scrim
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Brush.verticalGradient(listOf(Color.Transparent, DarkBg)))
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Color.Transparent,
+                            DarkBg
+                        )
+                    )
+                )
         )
-        
-        // Back Button
+
         IconButton(
             onClick = onBack,
-            modifier = Modifier.statusBarsPadding().padding(16.dp).background(Color.Black.copy(0.4f), CircleShape)
+            modifier = Modifier
+                .statusBarsPadding()
+                .padding(16.dp)
+                .background(
+                    Color.Black.copy(0.4f),
+                    CircleShape
+                )
         ) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = Color.White)
+            Icon(
+                Icons.AutoMirrored.Filled.ArrowBack,
+                null,
+                tint = Color.White
+            )
         }
 
-        // Info Overlay
         Column(
-            modifier = Modifier.align(Alignment.BottomStart).padding(16.dp),
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(show.name, color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Surface(color = Purple, shape = RoundedCornerShape(4.dp)) {
-                    Text("ANIME", color = Color.White, fontSize = 10.sp, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), fontWeight = FontWeight.Bold)
+
+            Text(
+                show.name,
+                color = Color.White,
+                fontSize = 28.sp,
+                fontWeight = FontWeight.ExtraBold
+            )
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+
+                Surface(
+                    color = Purple,
+                    shape = RoundedCornerShape(4.dp)
+                ) {
+                    Text(
+                        "ANIME",
+                        color = Color.White,
+                        fontSize = 10.sp,
+                        modifier = Modifier.padding(
+                            horizontal = 6.dp,
+                            vertical = 2.dp
+                        ),
+                        fontWeight = FontWeight.Bold
+                    )
                 }
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Icon(Icons.Default.Star, null, tint = Color.Yellow, modifier = Modifier.size(14.dp))
-                    Text(show.score ?: "N/A", color = TextSec, fontSize = 12.sp)
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Star,
+                        null,
+                        tint = Color.Yellow,
+                        modifier = Modifier.size(14.dp)
+                    )
+
+                    Text(
+                        show.score ?: "N/A",
+                        color = TextSec,
+                        fontSize = 12.sp
+                    )
                 }
-                Text("${show.episodeCount ?: episodeCount} Episodes", color = TextSec, fontSize = 12.sp)
+
+                Text(
+                    "${show.episodeCount ?: episodeCount} Episodes",
+                    color = TextSec,
+                    fontSize = 12.sp
+                )
+            }
+
+            OutlinedButton(
+                onClick = { onToggleSave("anime_${show.animeID}") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
+                shape = RoundedCornerShape(8.dp),
+                border = BorderStroke(
+                    1.dp,
+                    if (isSaved) Purple else Color.Gray
+                )
+            ) {
+
+                Icon(
+                    if (isSaved)
+                        Icons.Default.Check
+                    else
+                        Icons.Default.Add,
+                    null,
+                    tint =
+                        if (isSaved)
+                            Purple
+                        else
+                            Color.White
+                )
+
+                Text(
+                    if (isSaved)
+                        " Saved to Watchlist"
+                    else
+                        " Add to Watchlist",
+                    color = Color.White
+                )
             }
         }
     }

@@ -9,6 +9,7 @@ import com.streamzee.data.TmdbMovie
 import com.streamzee.data.TmdbEpisode
 import com.streamzee.data.MegaPlayShow
 import com.streamzee.data.MegaPlayEpisode
+import com.streamzee.data.JikanAnime
 import com.streamzee.repository.StreamzeeRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -75,6 +76,7 @@ data class MainUiState(
     val trendingMovies: List<TmdbMovie> = emptyList(),
     val savedIds: Set<String> = emptySet(),
     val savedMovies: List<TmdbMovie> = emptyList(),
+    val savedAnime: List<JikanAnime> = emptyList(),
     val searchMode: SearchMode = SearchMode.MOVIES,
     val searchQuery: String = "",
     val searchResults: List<TmdbMovie> = emptyList(),
@@ -411,9 +413,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     _uiState.update { it.copy(selectedTranslationType = type) }
     }
 
-    fun toggleSaved(movieId: String) {
+    fun toggleSaved(prefixedId: String) {
         viewModelScope.launch {
-            repository.toggleSaved(movieId)
+            repository.toggleSaved(prefixedId)
         }
     }
 
@@ -451,28 +453,87 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun loadSavedMovies(apiKey: String?, savedIds: Set<String>) {
+
         if (apiKey.isNullOrBlank() || savedIds.isEmpty()) {
-            _uiState.update { it.copy(savedMovies = emptyList(), isLoadingSaved = false) }
+            _uiState.update {
+                it.copy(
+                    savedMovies = emptyList(),
+                    isLoadingSaved = false
+                )
+            }
             return
         }
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoadingSaved = true, errorMessage = null) }
+
+            _uiState.update {
+                it.copy(isLoadingSaved = true, errorMessage = null)
+            }
+
             try {
-                val movies = repository.fetchSavedMovies(apiKey, savedIds)
-                _uiState.update { it.copy(savedMovies = movies, isLoadingSaved = false) }
+
+                val results = savedIds.mapNotNull { prefixedId ->
+                    if (!prefixedId.startsWith("movie_") && !prefixedId.startsWith("tv_")) return@mapNotNull null
+                    
+                    val id = prefixedId.split("_")[1]
+                    if (prefixedId.startsWith("tv_")) {
+                        repository.getTvShowDetails(apiKey, id) // Removed !!
+                    } else {
+                        repository.getMovieDetails(apiKey, id) // Removed !!
+               }
+        }
+            _uiState.update { it.copy(savedMovies = results, isLoadingSaved = false) 
+            
+            }
+
             } catch (exception: Exception) {
+
                 _uiState.update {
                     it.copy(
                         savedMovies = emptyList(),
                         isLoadingSaved = false,
-                        errorMessage = "Unable to load saved library: ${exception.message ?: "network error"}",
+                        errorMessage =
+                            "Unable to load saved library: ${
+                                exception.message ?: "network error"
+                            }"
                     )
                 }
             }
         }
     }
 
+    
+    private fun loadSavedAnime(savedIds: Set<String>) {
+
+        val animeIds = savedIds
+            .filter { it.startsWith("anime_") }
+            .map { it.removePrefix("anime_") }
+
+        if (animeIds.isEmpty()) {
+            _uiState.update { it.copy(savedAnime = emptyList()) }
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingSaved = true) }
+
+            val animeList = animeIds.mapNotNull { id ->
+                try {
+                    repository.getAnimeById(id.toInt()) // Jikan call
+                } catch (e: Exception) {
+                    null
+                }
+            }
+
+            _uiState.update {
+                it.copy(
+                    savedAnime = animeList,
+                    isLoadingSaved = false
+                )
+            }
+        }
+    }    
+    
     private fun loadWatchProgress(movieId: String) {
         viewModelScope.launch {
             // Collect the Triple (Position, Season, Episode)
