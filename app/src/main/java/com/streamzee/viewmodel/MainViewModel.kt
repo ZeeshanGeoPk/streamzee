@@ -153,6 +153,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 if (_uiState.value.currentScreen is Screen.Library) {
                     loadSavedMovies(_uiState.value.apiKey, savedIds)
+                    loadSavedAnime(savedIds)
                 }
             }
         }
@@ -297,8 +298,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun openLibrary() {
+        val ids = _uiState.value.savedIds
         _uiState.update { it.copy(currentScreen = Screen.Library, errorMessage = null, currentMovieWatchProgressMs = null) }
-        loadSavedMovies(_uiState.value.apiKey, _uiState.value.savedIds)
+        loadSavedMovies(_uiState.value.apiKey, ids)
+        loadSavedAnime(ids) // Added this line
     }
 
     fun openDownloads() {
