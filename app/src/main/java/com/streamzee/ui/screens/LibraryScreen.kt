@@ -101,6 +101,12 @@ fun libraryScreen(
                 icon = Icons.Default.Tv,
                 modifier = Modifier.weight(1f)
             )
+            watchlistStatChip(
+                label = "${savedAnime.size} Anime",
+                icon = Icons.Default.Animation, // Use Icons.Default.Animation or Icons.Default.AutoAwesome
+                modifier = Modifier.weight(1f)
+            )
+            
         }
 
         Spacer(Modifier.height(14.dp))
@@ -210,11 +216,6 @@ fun libraryScreen(
                 else -> allItems
             }
         }
-        
-        Text(
-    "Movies: ${savedMovies.size} Anime: ${savedAnime.size}",
-    color = Color.Red
-)
 
             LazyColumn(
                 modifier = Modifier
@@ -257,16 +258,27 @@ private fun watchlistStatChip(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     modifier: Modifier = Modifier
 ) {
-    Row(
+    Column(
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
             .background(CardBg)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
-        Icon(icon, null, tint = Purple, modifier = Modifier.size(16.dp))
-        Text(label, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+        Icon(
+            imageVector = icon, 
+            contentDescription = null, 
+            tint = Purple, 
+            modifier = Modifier.size(20.dp) // Slightly larger icon looks better vertically
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = label, 
+            color = Color.White, 
+            fontSize = 11.sp, // Slightly smaller font to fit 4 chips in a row comfortably
+            fontWeight = FontWeight.Bold
+        )
     }
 }
 
