@@ -199,6 +199,7 @@ fun libraryScreen(
         val filteredItems = remember(allItems, selectedFilter) {
             when (selectedFilter) {
                 "Movies" -> allItems.filterIsInstance<WatchlistItem.Movie>()
+                     .filter { it.data.mediaType == "movie" }
 
                 "TV Shows" -> allItems.filterIsInstance<WatchlistItem.Movie>()
                     .filter { it.data.mediaType == "tv" }

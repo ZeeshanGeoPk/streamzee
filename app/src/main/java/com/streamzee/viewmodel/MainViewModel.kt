@@ -479,11 +479,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     if (!prefixedId.startsWith("movie_") && !prefixedId.startsWith("tv_")) return@mapNotNull null
                     
                     val id = prefixedId.split("_")[1]
-                    if (prefixedId.startsWith("tv_")) {
-                        repository.getTvShowDetails(apiKey, id) // Removed !!
-                    } else {
-                        repository.getMovieDetails(apiKey, id) // Removed !!
-               }
+                        if (prefixedId.startsWith("tv_")) {
+                            // Explicitly set mediaType to "tv"
+                            repository.getTvShowDetails(apiKey, id).copy(mediaType = "tv")
+                        } else {
+                            // Explicitly set mediaType to "movie"
+                            repository.getMovieDetails(apiKey, id).copy(mediaType = "movie")
+                        }
         }
             _uiState.update { it.copy(savedMovies = results, isLoadingSaved = false) 
             
