@@ -156,6 +156,7 @@ fun streamzeeApp(viewModel: MainViewModel) {
                         topMovies = uiState.topMovies,
                         topTv = uiState.topTv,
                         topAnime = uiState.topAnime,
+                        continueWatching = uiState.continueWatching,
                         savedIds = uiState.savedIds,
                         onSearchClicked = viewModel::openSearch,
                         onLibraryClicked = viewModel::openLibrary,

@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -32,6 +31,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.streamzee.data.MegaPlayShow
 import com.streamzee.data.TmdbMovie
+import com.streamzee.viewmodel.ContinueWatchingItem
 import com.streamzee.viewmodel.HomeSection
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.seconds
@@ -42,6 +42,40 @@ private val Purple = Color(0xFFA855F7)
 private val CardBg = Color(0xFF161622)
 private val TextSecondary = Color(0xFF8E8E9F)
 private val ScreenBg = Color(0xFF050508)
+
+private sealed interface HomeHeroItem {
+    val key: String
+    val title: String
+    val imageUrl: String?
+    val metadata: String
+    val score: String
+    val overview: String?
+
+    data class Tmdb(val movie: TmdbMovie) : HomeHeroItem {
+        override val key: String = "${movie.mediaType}_${movie.tmdbID}"
+        override val title: String = movie.displayTitle
+        override val imageUrl: String? = (movie.backdropPath ?: movie.posterPath)?.let { TMDB_IMAGE_W780 + it }
+        override val metadata: String = listOfNotNull(
+            if (movie.isTv) "TV Series" else "Movie",
+            movie.displayYear.takeIf { it.isNotBlank() },
+        ).joinToString(" / ")
+        override val score: String = movie.voteAverage?.let { String.format("%.1f", it) } ?: "N/A"
+        override val overview: String? = movie.overview
+    }
+
+    data class Anime(val show: MegaPlayShow) : HomeHeroItem {
+        override val key: String = "anime_${show.animeID}"
+        override val title: String = show.name
+        override val imageUrl: String? = show.thumbnail
+        override val metadata: String = listOfNotNull(
+            "Anime",
+            show.animeType,
+            show.episodeCount?.takeIf { it > 0 }?.let { "$it eps" },
+        ).joinToString(" / ")
+        override val score: String = show.score?.takeIf { it.isNotBlank() } ?: "N/A"
+        override val overview: String? = null
+    }
+}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -55,6 +89,7 @@ fun homeScreen(
     topMovies: List<TmdbMovie>,
     topTv: List<TmdbMovie>,
     topAnime: List<MegaPlayShow>,
+    continueWatching: List<ContinueWatchingItem>,
     savedIds: Set<String>,
     onSearchClicked: () -> Unit,
     onLibraryClicked: () -> Unit,
@@ -67,8 +102,15 @@ fun homeScreen(
     modifier: Modifier = Modifier,
 ) {
     // Split trending into hero (first 5) and rows
-    val heroMovies = (trendingMovies + trendingTv).take(5)
-    val continueWatching = (trendingMovies + trendingTv).drop(5).take(6) // Simulated continue watching
+    val heroItems = buildList {
+        addAll(trendingMovies.take(2).map { HomeHeroItem.Tmdb(it) })
+        addAll(trendingTv.take(2).map { HomeHeroItem.Tmdb(it) })
+        addAll(trendingAnime.take(2).map { HomeHeroItem.Anime(it) })
+        addAll(topAnime.take(1).map { HomeHeroItem.Anime(it) })
+    }
+        .filter { !it.imageUrl.isNullOrBlank() }
+        .distinctBy { it.key }
+        .take(6)
 
     LazyColumn(
         modifier = modifier
@@ -118,15 +160,15 @@ fun homeScreen(
         }
 
         // ── Hero Banner Carousel ─────────────────────────────────
-        if (heroMovies.isNotEmpty()) {
+        if (heroItems.isNotEmpty()) {
             item {
-                val pagerState = rememberPagerState(pageCount = { heroMovies.size })
+                val pagerState = rememberPagerState(pageCount = { heroItems.size })
 
                 // Auto-scroll
                 LaunchedEffect(pagerState) {
                     while (true) {
                         delay(4.seconds)
-                        val next = (pagerState.currentPage + 1) % heroMovies.size
+                        val next = (pagerState.currentPage + 1) % heroItems.size
                         pagerState.animateScrollToPage(next)
                     }
                 }
@@ -136,19 +178,24 @@ fun homeScreen(
                         state = pagerState,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(220.dp)
+                            .height(260.dp)
                     ) { page ->
-                        val movie = heroMovies[page]
+                        val heroItem = heroItems[page]
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .padding(horizontal = 16.dp)
                                 .clip(RoundedCornerShape(16.dp))
-                                .clickable { onMovieClicked(movie) }
+                                .clickable {
+                                    when (heroItem) {
+                                        is HomeHeroItem.Tmdb -> onMovieClicked(heroItem.movie)
+                                        is HomeHeroItem.Anime -> onAnimeClicked(heroItem.show)
+                                    }
+                                }
                         ) {
                             AsyncImage(
-                                model = TMDB_IMAGE_W780 + (movie.backdropPath ?: movie.posterPath),
-                                contentDescription = movie.displayTitle,
+                                model = heroItem.imageUrl,
+                                contentDescription = heroItem.title,
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Crop
                             )
@@ -167,14 +214,29 @@ fun homeScreen(
                             Column(
                                 modifier = Modifier
                                     .align(Alignment.BottomStart)
+                                    .fillMaxWidth()
                                     .padding(16.dp)
                             ) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(Purple.copy(alpha = 0.24f))
+                                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                                ) {
+                                    Text(
+                                        heroItem.metadata,
+                                        color = Color.White,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Spacer(Modifier.height(6.dp))
                                 Text(
-                                    movie.displayTitle,
+                                    heroItem.title,
                                     color = Color.White,
-                                    fontSize = 20.sp,
+                                    fontSize = 24.sp,
                                     fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
+                                    maxLines = 2,
                                     overflow = TextOverflow.Ellipsis
                                 )
                                 Spacer(Modifier.height(4.dp))
@@ -189,43 +251,55 @@ fun homeScreen(
                                     ) {
                                         Icon(Icons.Default.Star, null, tint = Color(0xFFFBBF24), modifier = Modifier.size(14.dp))
                                         Text(
-                                            movie.voteAverage?.let { String.format("%.1f", it) } ?: "N/A",
+                                            heroItem.score,
                                             color = Color.White,
                                             fontSize = 13.sp
                                         )
                                     }
-                                    Text("•", color = TextSecondary, fontSize = 13.sp)
+                                }
+                                if (!heroItem.overview.isNullOrBlank()) {
+                                    Spacer(Modifier.height(6.dp))
                                     Text(
-                                        movie.releaseDate?.take(4) ?: "",
-                                        color = TextSecondary,
-                                        fontSize = 13.sp
+                                        heroItem.overview.orEmpty(),
+                                        color = Color.White.copy(alpha = 0.84f),
+                                        fontSize = 12.sp,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.fillMaxWidth(0.92f)
                                     )
                                 }
                                 Spacer(Modifier.height(8.dp))
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     Button(
-                                        onClick = { onMovieClicked(movie) },
+                                        onClick = {
+                                            when (heroItem) {
+                                                is HomeHeroItem.Tmdb -> onMovieClicked(heroItem.movie)
+                                                is HomeHeroItem.Anime -> onAnimeClicked(heroItem.show)
+                                            }
+                                        },
                                         colors = ButtonDefaults.buttonColors(containerColor = Purple),
                                         shape = RoundedCornerShape(24.dp),
                                         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp)
                                     ) {
                                         Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(18.dp))
                                         Spacer(Modifier.width(6.dp))
-                                        Text("Play", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                        Text("Details", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                                     }
-                                    OutlinedButton(
-                                        onClick = { onToggleSave(movie.watchlistKey) },
-                                        shape = RoundedCornerShape(24.dp),
-                                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
-                                    ) {
-                                        Icon(
-                                            if (savedIds.contains(movie.watchlistKey)) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                            null,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                        Spacer(Modifier.width(6.dp))
-                                        Text("Watchlist", fontSize = 13.sp)
+                                    if (heroItem is HomeHeroItem.Tmdb) {
+                                        OutlinedButton(
+                                            onClick = { onToggleSave(heroItem.movie.watchlistKey) },
+                                            shape = RoundedCornerShape(24.dp),
+                                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
+                                        ) {
+                                            Icon(
+                                                if (savedIds.contains(heroItem.movie.watchlistKey)) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                                null,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                            Spacer(Modifier.width(6.dp))
+                                            Text("Watchlist", fontSize = 13.sp)
+                                        }
                                     }
                                 }
                             }
@@ -239,7 +313,7 @@ fun homeScreen(
                             .padding(bottom = 8.dp),
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        repeat(heroMovies.size) { index ->
+                        repeat(heroItems.size) { index ->
                             Box(
                                 modifier = Modifier
                                     .size(if (pagerState.currentPage == index) 8.dp else 6.dp)
@@ -287,11 +361,10 @@ fun homeScreen(
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    itemsIndexed(continueWatching) { index, movie ->
+                    items(continueWatching, key = { "${it.movie.mediaType}_${it.movie.tmdbID}" }) { item ->
                         continueWatchingCard(
-                            movie = movie,
-                            progress = (0.2f + index * 0.15f).coerceAtMost(0.9f),
-                            onClick = { onMovieClicked(movie) }
+                            item = item,
+                            onClick = { onMovieClicked(item.movie) }
                         )
                     }
                 }
@@ -457,7 +530,14 @@ private val TmdbMovie.watchlistKey: String
 
 // ── Continue Watching Card ───────────────────────────────────────
 @Composable
-private fun continueWatchingCard(movie: TmdbMovie, progress: Float, onClick: () -> Unit) {
+private fun continueWatchingCard(item: ContinueWatchingItem, onClick: () -> Unit) {
+    val movie = item.movie
+    val subtitle = if (movie.isTv && item.season != null && item.episode != null) {
+        "S${item.season} E${item.episode} / ${formatResumeTime(item.positionMs)} watched"
+    } else {
+        "${formatResumeTime(item.positionMs)} watched"
+    }
+
     Column(
         modifier = Modifier
             .width(160.dp)
@@ -499,7 +579,7 @@ private fun continueWatchingCard(movie: TmdbMovie, progress: Float, onClick: () 
         }
         // Progress bar
         LinearProgressIndicator(
-            progress = progress,
+            progress = item.progress,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(3.dp)
@@ -517,12 +597,20 @@ private fun continueWatchingCard(movie: TmdbMovie, progress: Float, onClick: () 
             overflow = TextOverflow.Ellipsis
         )
         Text(
-            "Episode ${(1..12).random()} • ${(20..45).random()} min left",
+            subtitle,
             color = TextSecondary,
             fontSize = 11.sp,
-            maxLines = 1
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
     }
+}
+
+private fun formatResumeTime(positionMs: Long): String {
+    val totalMinutes = (positionMs / 60000L).coerceAtLeast(1L)
+    val hours = totalMinutes / 60
+    val minutes = totalMinutes % 60
+    return if (hours > 0) "${hours}h ${minutes}m" else "${minutes}m"
 }
 
 // ── Standard Poster Card ─────────────────────────────────────────

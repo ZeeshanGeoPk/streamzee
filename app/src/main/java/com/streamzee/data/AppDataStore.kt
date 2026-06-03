@@ -16,6 +16,7 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 object AppDataStore {
     private val TMDB_API_KEY = stringPreferencesKey("tmdb_api_key")
     private val SAVED_IDS = stringSetPreferencesKey("saved_media_ids")
+    private val WATCH_HISTORY_IDS = stringPreferencesKey("watch_history_ids")
 
     private fun watchProgressKey(movieId: String) = stringPreferencesKey("watch_progress_$movieId")
     private fun lastSeasonKey(movieId: String) = stringPreferencesKey("last_season_$movieId")
@@ -30,12 +31,29 @@ object AppDataStore {
             Triple(pos, season, episode)
         }
 
+    fun watchHistoryIdsFlow(context: Context): Flow<List<String>> =
+        context.dataStore.data.map { preferences ->
+            preferences[WATCH_HISTORY_IDS]
+                ?.split(",")
+                ?.map { it.trim() }
+                ?.filter { it.isNotBlank() }
+                ?: emptyList()
+        }
+
     // Update save function to include Season and Episode
     suspend fun saveWatchProgress(context: Context, movieId: String, positionMs: Long, season: Int? = null, episode: Int? = null) {
         context.dataStore.edit { preferences ->
             preferences[watchProgressKey(movieId)] = positionMs.toString()
             season?.let { preferences[lastSeasonKey(movieId)] = it.toString() }
             episode?.let { preferences[lastEpisodeKey(movieId)] = it.toString() }
+
+            val mediaKey = if (season != null || episode != null) "tv_$movieId" else "movie_$movieId"
+            val currentIds = preferences[WATCH_HISTORY_IDS]
+                ?.split(",")
+                ?.map { it.trim() }
+                ?.filter { it.isNotBlank() && it != mediaKey }
+                ?: emptyList()
+            preferences[WATCH_HISTORY_IDS] = (listOf(mediaKey) + currentIds).take(30).joinToString(",")
         }
     }
     

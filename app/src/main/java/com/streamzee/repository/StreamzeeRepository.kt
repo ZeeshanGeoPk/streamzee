@@ -31,6 +31,8 @@ class StreamzeeRepository(
 
     fun savedIdsFlow(): Flow<Set<String>> = AppDataStore.savedIdsFlow(context)
 
+    fun watchHistoryIdsFlow(): Flow<List<String>> = AppDataStore.watchHistoryIdsFlow(context)
+
     suspend fun saveApiKey(apiKey: String) {
         AppDataStore.saveApiKey(context, apiKey)
     }

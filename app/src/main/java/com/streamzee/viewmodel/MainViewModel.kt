@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -91,6 +92,14 @@ data class HomeBrowseUiState(
     val errorMessage: String? = null,
 )
 
+data class ContinueWatchingItem(
+    val movie: TmdbMovie,
+    val progress: Float,
+    val positionMs: Long,
+    val season: Int? = null,
+    val episode: Int? = null,
+)
+
 data class MainUiState(
     val apiKey: String? = null,
     val lastWatchedSeason: Int? = null,
@@ -98,6 +107,7 @@ data class MainUiState(
     val currentSeasonEpisodes: List<TmdbEpisode> = emptyList(),
     val currentScreen: Screen = Screen.Setup,
     val backStack: List<Screen> = emptyList(),
+    val continueWatching: List<ContinueWatchingItem> = emptyList(),
     val trendingMovies: List<TmdbMovie> = emptyList(),
     val savedIds: Set<String> = emptySet(),
     val savedMovies: List<TmdbMovie> = emptyList(),
@@ -234,6 +244,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 if (!apiKey.isNullOrBlank()) {
                     loadHomeContent(apiKey)
+                    loadContinueWatching(apiKey, repository.watchHistoryIdsFlow().first())
                 }
             }
         }
@@ -251,6 +262,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     loadSavedMovies(_uiState.value.apiKey, savedIds)
                     loadSavedAnime(savedIds)
                 }
+            }
+        }
+
+        viewModelScope.launch {
+            repository.watchHistoryIdsFlow().collectLatest { historyIds ->
+                loadContinueWatching(_uiState.value.apiKey, historyIds)
             }
         }
     }
@@ -517,6 +534,45 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             HomeSection.TOP_ANIME -> repository.fetchTopAnime(page)
             else -> emptyList()
         }
+
+    private fun loadContinueWatching(apiKey: String?, historyIds: List<String>) {
+        if (apiKey.isNullOrBlank() || historyIds.isEmpty()) {
+            _uiState.update { it.copy(continueWatching = emptyList()) }
+            return
+        }
+
+        viewModelScope.launch {
+            val items = historyIds.take(12).mapNotNull { mediaKey ->
+                try {
+                    val id = mediaKey.substringAfter("_")
+                    val isTv = mediaKey.startsWith("tv_")
+                    val movie = if (isTv) {
+                        repository.getTvShowDetails(apiKey, id).copy(mediaType = "tv")
+                    } else {
+                        repository.getMovieDetails(apiKey, id).copy(mediaType = "movie")
+                    }
+                    val (positionMs, season, episode) = repository.watchProgressFlow(id).first()
+                    ContinueWatchingItem(
+                        movie = movie,
+                        progress = estimateWatchProgress(positionMs, isTv),
+                        positionMs = positionMs,
+                        season = season.takeIf { isTv },
+                        episode = episode.takeIf { isTv },
+                    )
+                } catch (exception: Exception) {
+                    null
+                }
+            }
+
+            _uiState.update { it.copy(continueWatching = items) }
+        }
+    }
+
+    private fun estimateWatchProgress(positionMs: Long, isTv: Boolean): Float {
+        val estimatedDurationMs = if (isTv) 45 * 60 * 1000L else 120 * 60 * 1000L
+        if (positionMs <= 0L) return 0.08f
+        return (positionMs.toFloat() / estimatedDurationMs).coerceIn(0.08f, 0.95f)
+    }
 
     fun openSearch() {
         navigateTo(Screen.Search)
