@@ -28,12 +28,25 @@ enum class SearchMode {
     ANIME,
 }
 
+enum class HomeSection(val title: String, val isAnime: Boolean = false) {
+    TRENDING_MOVIES("Trending Movies"),
+    TRENDING_TV("Trending TV Shows"),
+    TRENDING_ANIME("Trending Anime", isAnime = true),
+    RECENT_MOVIES("New Movies"),
+    RECENT_TV("New TV Shows"),
+    RECENT_ANIME("New Anime", isAnime = true),
+    TOP_MOVIES("Top Movies"),
+    TOP_TV("Top TV Shows"),
+    TOP_ANIME("Top Anime", isAnime = true),
+}
+
 sealed interface Screen {
     object Home : Screen
     object Search : Screen
     object Library : Screen
     object Downloads : Screen
     object Profile : Screen
+    data class HomeBrowse(val section: HomeSection) : Screen
     data class Details(val movie: TmdbMovie) : Screen
     data class Player(
         val movie: TmdbMovie,
@@ -68,6 +81,16 @@ data class DownloadItem(
     val imageUrl: String
 )
 
+data class HomeBrowseUiState(
+    val section: HomeSection? = null,
+    val movies: List<TmdbMovie> = emptyList(),
+    val anime: List<MegaPlayShow> = emptyList(),
+    val nextPage: Int = 1,
+    val isLoading: Boolean = false,
+    val endReached: Boolean = false,
+    val errorMessage: String? = null,
+)
+
 data class MainUiState(
     val apiKey: String? = null,
     val lastWatchedSeason: Int? = null,
@@ -99,6 +122,7 @@ data class MainUiState(
     val recentMovies: List<TmdbMovie> = emptyList(),
     val recentTv: List<TmdbMovie> = emptyList(),
     val recentAnime: List<MegaPlayShow> = emptyList(),
+    val homeBrowse: HomeBrowseUiState = HomeBrowseUiState(),
     
     // Premium custom states
     val themeMode: String = "Dark",
@@ -351,6 +375,104 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun openHome() {
         _uiState.update { it.copy(currentScreen = Screen.Home, errorMessage = null, currentMovieWatchProgressMs = null) }
     }
+
+    fun openHomeBrowse(section: HomeSection) {
+        _uiState.update {
+            it.copy(
+                currentScreen = Screen.HomeBrowse(section),
+                homeBrowse = HomeBrowseUiState(section = section),
+                errorMessage = null,
+                currentMovieWatchProgressMs = null,
+            )
+        }
+        loadNextHomeBrowsePage()
+    }
+
+    fun loadNextHomeBrowsePage() {
+        val browse = _uiState.value.homeBrowse
+        val section = browse.section ?: return
+        if (browse.isLoading || browse.endReached) return
+
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(homeBrowse = it.homeBrowse.copy(isLoading = true, errorMessage = null))
+            }
+
+            try {
+                val apiKey = _uiState.value.apiKey
+                val page = _uiState.value.homeBrowse.nextPage
+
+                if (!section.isAnime && apiKey.isNullOrBlank()) {
+                    _uiState.update {
+                        it.copy(
+                            homeBrowse = it.homeBrowse.copy(
+                                isLoading = false,
+                                endReached = true,
+                                errorMessage = "TMDB token is required.",
+                            )
+                        )
+                    }
+                    return@launch
+                }
+
+                if (section.isAnime) {
+                    val newItems = fetchHomeBrowseAnime(section, page)
+                    _uiState.update {
+                        val merged = (it.homeBrowse.anime + newItems).distinctBy { anime -> anime.animeID }
+                        it.copy(
+                            homeBrowse = it.homeBrowse.copy(
+                                anime = merged,
+                                nextPage = page + 1,
+                                isLoading = false,
+                                endReached = newItems.isEmpty(),
+                            )
+                        )
+                    }
+                } else {
+                    val newItems = fetchHomeBrowseMovies(section, apiKey!!, page)
+                    _uiState.update {
+                        val merged = (it.homeBrowse.movies + newItems).distinctBy { movie -> movie.tmdbID }
+                        it.copy(
+                            homeBrowse = it.homeBrowse.copy(
+                                movies = merged,
+                                nextPage = page + 1,
+                                isLoading = false,
+                                endReached = newItems.isEmpty(),
+                            )
+                        )
+                    }
+                }
+            } catch (exception: Exception) {
+                _uiState.update {
+                    it.copy(
+                        homeBrowse = it.homeBrowse.copy(
+                            isLoading = false,
+                            errorMessage = "Unable to load more: ${exception.message ?: "network error"}",
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    private suspend fun fetchHomeBrowseMovies(section: HomeSection, apiKey: String, page: Int): List<TmdbMovie> =
+        when (section) {
+            HomeSection.TRENDING_MOVIES -> repository.fetchTrendingMovies(apiKey, page)
+            HomeSection.TRENDING_TV -> repository.fetchTrendingTv(apiKey, page)
+            HomeSection.RECENT_MOVIES -> repository.fetchRecentMovies(apiKey, page)
+            HomeSection.RECENT_TV -> repository.fetchRecentTv(apiKey, page)
+            HomeSection.TOP_MOVIES -> repository.fetchTopMovies(apiKey, page)
+            HomeSection.TOP_TV -> repository.fetchTopTv(apiKey, page)
+            else -> emptyList()
+        }
+
+    private suspend fun fetchHomeBrowseAnime(section: HomeSection, page: Int): List<MegaPlayShow> =
+        when (section) {
+            HomeSection.TRENDING_ANIME -> repository.fetchTrendingAnime(page)
+            HomeSection.RECENT_ANIME -> repository.fetchRecentAnime(page)
+            HomeSection.TOP_ANIME -> repository.fetchTopAnime(page)
+            else -> emptyList()
+        }
 
     fun openSearch() {
         _uiState.update { it.copy(currentScreen = Screen.Search, errorMessage = null, currentMovieWatchProgressMs = null) }

@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.streamzee.data.MegaPlayShow
 import com.streamzee.data.TmdbMovie
+import com.streamzee.viewmodel.HomeSection
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.seconds
 
@@ -59,6 +60,7 @@ fun homeScreen(
     onLibraryClicked: () -> Unit,
     onMovieClicked: (TmdbMovie) -> Unit,
     onAnimeClicked: (MegaPlayShow) -> Unit,
+    onSeeAllClicked: (HomeSection) -> Unit,
     onToggleSave: (String) -> Unit,
     isLoading: Boolean,
     errorMessage: String?,
@@ -279,7 +281,7 @@ fun homeScreen(
 
         // ── Continue Watching ────────────────────────────────────
         if (continueWatching.isNotEmpty()) {
-            item { sectionHeader("Continue Watching", "See all") }
+            item { sectionHeader("Continue Watching") }
             item {
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
@@ -298,7 +300,7 @@ fun homeScreen(
 
         // ── Trending ─────────────────────────────────────────────
         if (trendingMovies.isNotEmpty()) {
-            item { sectionHeader("Trending Movies", "See all") }
+            item { sectionHeader("Trending Movies", onActionClick = { onSeeAllClicked(HomeSection.TRENDING_MOVIES) }) }
             item {
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
@@ -312,7 +314,7 @@ fun homeScreen(
         }
 
         if (trendingTv.isNotEmpty()) {
-            item { sectionHeader("Trending TV Shows", "See all") }
+            item { sectionHeader("Trending TV Shows", onActionClick = { onSeeAllClicked(HomeSection.TRENDING_TV) }) }
             item {
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
@@ -326,7 +328,7 @@ fun homeScreen(
         }
 
         if (trendingAnime.isNotEmpty()) {
-            item { sectionHeader("Trending Anime", "See all") }
+            item { sectionHeader("Trending Anime", onActionClick = { onSeeAllClicked(HomeSection.TRENDING_ANIME) }) }
             item {
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
@@ -341,7 +343,7 @@ fun homeScreen(
 
         // ── New ─────────────────────────────────────────────────
         if (recentMovies.isNotEmpty()) {
-            item { sectionHeader("New Movies", "See all") }
+            item { sectionHeader("New Movies", onActionClick = { onSeeAllClicked(HomeSection.RECENT_MOVIES) }) }
             item {
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
@@ -355,7 +357,7 @@ fun homeScreen(
         }
 
         if (recentTv.isNotEmpty()) {
-            item { sectionHeader("New TV Shows", "See all") }
+            item { sectionHeader("New TV Shows", onActionClick = { onSeeAllClicked(HomeSection.RECENT_TV) }) }
             item {
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
@@ -369,7 +371,7 @@ fun homeScreen(
         }
 
         if (recentAnime.isNotEmpty()) {
-            item { sectionHeader("New Anime", "See all") }
+            item { sectionHeader("New Anime", onActionClick = { onSeeAllClicked(HomeSection.RECENT_ANIME) }) }
             item {
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
@@ -384,7 +386,7 @@ fun homeScreen(
 
         // ── Top Rated ────────────────────────────────────────────
         if (topMovies.isNotEmpty()) {
-            item { sectionHeader("Top Movies", "See all") }
+            item { sectionHeader("Top Movies", onActionClick = { onSeeAllClicked(HomeSection.TOP_MOVIES) }) }
             item {
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
@@ -398,7 +400,7 @@ fun homeScreen(
         }
 
         if (topTv.isNotEmpty()) {
-            item { sectionHeader("Top TV Shows", "See all") }
+            item { sectionHeader("Top TV Shows", onActionClick = { onSeeAllClicked(HomeSection.TOP_TV) }) }
             item {
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
@@ -412,7 +414,7 @@ fun homeScreen(
         }
 
         if (topAnime.isNotEmpty()) {
-            item { sectionHeader("Top Anime", "See all") }
+            item { sectionHeader("Top Anime", onActionClick = { onSeeAllClicked(HomeSection.TOP_ANIME) }) }
             item {
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
@@ -429,7 +431,7 @@ fun homeScreen(
 
 // ── Section Header ───────────────────────────────────────────────
 @Composable
-private fun sectionHeader(title: String, action: String) {
+private fun sectionHeader(title: String, action: String? = "See all", onActionClick: (() -> Unit)? = null) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -438,7 +440,15 @@ private fun sectionHeader(title: String, action: String) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(title, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-        Text(action, color = Purple, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        if (action != null && onActionClick != null) {
+            Text(
+                action,
+                color = Purple,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.clickable(onClick = onActionClick)
+            )
+        }
     }
 }
 

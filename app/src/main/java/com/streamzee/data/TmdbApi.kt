@@ -9,11 +9,13 @@ interface TmdbApi {
     @GET("trending/movie/week")
     suspend fun getTrendingMovies(
         @Header("Authorization") authorization: String,
+        @Query("page") page: Int = 1,
     ): TmdbMovieResponse
 
     @GET("trending/tv/week")
     suspend fun getTrendingTv(
         @Header("Authorization") authorization: String,
+        @Query("page") page: Int = 1,
     ): TmdbMovieResponse
 
     @GET("search/movie")
@@ -70,24 +72,39 @@ interface TmdbApi {
     // For Home Screen Recommendations
     // Movies
     @GET("movie/now_playing")
-    suspend fun getRecentMovies(@Header("Authorization") auth: String): TmdbMovieResponse
+    suspend fun getRecentMovies(
+        @Header("Authorization") auth: String,
+        @Query("page") page: Int = 1,
+    ): TmdbMovieResponse
 
     @GET("movie/top_rated")
-    suspend fun getTopMovies(@Header("Authorization") auth: String): TmdbMovieResponse
+    suspend fun getTopMovies(
+        @Header("Authorization") auth: String,
+        @Query("page") page: Int = 1,
+    ): TmdbMovieResponse
 
     // TV
     @GET("tv/on_the_air")
-    suspend fun getRecentTv(@Header("Authorization") auth: String): TmdbMovieResponse
+    suspend fun getRecentTv(
+        @Header("Authorization") auth: String,
+        @Query("page") page: Int = 1,
+    ): TmdbMovieResponse
 
     @GET("tv/top_rated")
-    suspend fun getTopTv(@Header("Authorization") auth: String): TmdbMovieResponse
+    suspend fun getTopTv(
+        @Header("Authorization") auth: String,
+        @Query("page") page: Int = 1,
+    ): TmdbMovieResponse
 
     // Anime (Jikan)
     @GET("https://api.jikan.moe/v4/top/anime")
     suspend fun getTopAnime(
         @Query("filter") filter: String? = null,
+        @Query("page") page: Int = 1,
     ): JikanSearchResponse
 
     @GET("https://api.jikan.moe/v4/seasons/now")
-    suspend fun getRecentAnime(): JikanSearchResponse
+    suspend fun getRecentAnime(
+        @Query("page") page: Int = 1,
+    ): JikanSearchResponse
 }

@@ -25,6 +25,7 @@ import com.streamzee.ui.screens.animeDetailsScreen
 import com.streamzee.ui.screens.animePlayerScreen
 import com.streamzee.ui.screens.detailsScreen
 import com.streamzee.ui.screens.downloadsScreen
+import com.streamzee.ui.screens.homeBrowseScreen
 import com.streamzee.ui.screens.homeScreen
 import com.streamzee.ui.screens.libraryScreen
 import com.streamzee.ui.screens.playerScreen
@@ -150,11 +151,20 @@ fun streamzeeApp(viewModel: MainViewModel) {
                         onLibraryClicked = viewModel::openLibrary,
                         onMovieClicked = viewModel::openDetails,
                         onAnimeClicked = viewModel::openAnimeDetails,
+                        onSeeAllClicked = viewModel::openHomeBrowse,
                         onToggleSave = { id ->
                             viewModel.toggleSaved(id)
                         },
                         isLoading = uiState.isLoading,
                         errorMessage = uiState.errorMessage,
+                        modifier = contentModifier,
+                    )
+                    is Screen.HomeBrowse -> homeBrowseScreen(
+                        browseState = uiState.homeBrowse,
+                        onBack = viewModel::openHome,
+                        onLoadMore = viewModel::loadNextHomeBrowsePage,
+                        onMovieClicked = viewModel::openDetails,
+                        onAnimeClicked = viewModel::openAnimeDetails,
                         modifier = contentModifier,
                     )
                     is Screen.Search -> searchScreen(

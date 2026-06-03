@@ -49,40 +49,40 @@ class StreamzeeRepository(
         return api.getTrendingAll("Bearer $apiKey").results
     }
 
-    suspend fun fetchTrendingMovies(apiKey: String): List<TmdbMovie> {
-        return api.getTrendingMovies("Bearer $apiKey").results.asMovies()
+    suspend fun fetchTrendingMovies(apiKey: String, page: Int = 1): List<TmdbMovie> {
+        return api.getTrendingMovies("Bearer $apiKey", page).results.asMovies()
     }
 
-    suspend fun fetchTrendingTv(apiKey: String): List<TmdbMovie> {
-        return api.getTrendingTv("Bearer $apiKey").results.asTvShows()
+    suspend fun fetchTrendingTv(apiKey: String, page: Int = 1): List<TmdbMovie> {
+        return api.getTrendingTv("Bearer $apiKey", page).results.asTvShows()
     }
 
-    suspend fun fetchRecentMovies(apiKey: String): List<TmdbMovie> {
-        return api.getRecentMovies("Bearer $apiKey").results.asMovies()
+    suspend fun fetchRecentMovies(apiKey: String, page: Int = 1): List<TmdbMovie> {
+        return api.getRecentMovies("Bearer $apiKey", page).results.asMovies()
     }
 
-    suspend fun fetchRecentTv(apiKey: String): List<TmdbMovie> {
-        return api.getRecentTv("Bearer $apiKey").results.asTvShows()
+    suspend fun fetchRecentTv(apiKey: String, page: Int = 1): List<TmdbMovie> {
+        return api.getRecentTv("Bearer $apiKey", page).results.asTvShows()
     }
 
-    suspend fun fetchTopMovies(apiKey: String): List<TmdbMovie> {
-        return api.getTopMovies("Bearer $apiKey").results.asMovies()
+    suspend fun fetchTopMovies(apiKey: String, page: Int = 1): List<TmdbMovie> {
+        return api.getTopMovies("Bearer $apiKey", page).results.asMovies()
     }
 
-    suspend fun fetchTopTv(apiKey: String): List<TmdbMovie> {
-        return api.getTopTv("Bearer $apiKey").results.asTvShows()
+    suspend fun fetchTopTv(apiKey: String, page: Int = 1): List<TmdbMovie> {
+        return api.getTopTv("Bearer $apiKey", page).results.asTvShows()
     }
 
-    suspend fun fetchTrendingAnime(): List<MegaPlayShow> = withContext(Dispatchers.IO) {
-        api.getTopAnime(filter = "bypopularity").data.toMegaPlayShows()
+    suspend fun fetchTrendingAnime(page: Int = 1): List<MegaPlayShow> = withContext(Dispatchers.IO) {
+        api.getTopAnime(filter = "bypopularity", page = page).data.toMegaPlayShows()
     }
 
-    suspend fun fetchRecentAnime(): List<MegaPlayShow> = withContext(Dispatchers.IO) {
-        api.getRecentAnime().data.toMegaPlayShows()
+    suspend fun fetchRecentAnime(page: Int = 1): List<MegaPlayShow> = withContext(Dispatchers.IO) {
+        api.getRecentAnime(page).data.toMegaPlayShows()
     }
 
-    suspend fun fetchTopAnime(): List<MegaPlayShow> = withContext(Dispatchers.IO) {
-        api.getTopAnime().data.toMegaPlayShows()
+    suspend fun fetchTopAnime(page: Int = 1): List<MegaPlayShow> = withContext(Dispatchers.IO) {
+        api.getTopAnime(page = page).data.toMegaPlayShows()
     }
 
     suspend fun searchMovies(apiKey: String, query: String): List<TmdbMovie> {
