@@ -50,6 +50,7 @@ private sealed interface HomeHeroItem {
     val metadata: String
     val score: String
     val overview: String?
+    val watchlistKey: String
 
     data class Tmdb(val movie: TmdbMovie) : HomeHeroItem {
         override val key: String = "${movie.mediaType}_${movie.tmdbID}"
@@ -61,6 +62,7 @@ private sealed interface HomeHeroItem {
         ).joinToString(" / ")
         override val score: String = movie.voteAverage?.let { String.format("%.1f", it) } ?: "N/A"
         override val overview: String? = movie.overview
+        override val watchlistKey: String = movie.watchlistKey
     }
 
     data class Anime(val show: MegaPlayShow) : HomeHeroItem {
@@ -74,6 +76,7 @@ private sealed interface HomeHeroItem {
         ).joinToString(" / ")
         override val score: String = show.score?.takeIf { it.isNotBlank() } ?: "N/A"
         override val overview: String? = null
+        override val watchlistKey: String = "anime_${show.animeID}"
     }
 }
 
@@ -285,21 +288,19 @@ fun homeScreen(
                                         Spacer(Modifier.width(6.dp))
                                         Text("Details", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                                     }
-                                    if (heroItem is HomeHeroItem.Tmdb) {
-                                        OutlinedButton(
-                                            onClick = { onToggleSave(heroItem.movie.watchlistKey) },
-                                            shape = RoundedCornerShape(24.dp),
-                                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
-                                        ) {
-                                            Icon(
-                                                if (savedIds.contains(heroItem.movie.watchlistKey)) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                                null,
-                                                modifier = Modifier.size(16.dp)
-                                            )
-                                            Spacer(Modifier.width(6.dp))
-                                            Text("Watchlist", fontSize = 13.sp)
-                                        }
+                                    OutlinedButton(
+                                        onClick = { onToggleSave(heroItem.watchlistKey) },
+                                        shape = RoundedCornerShape(24.dp),
+                                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
+                                    ) {
+                                        Icon(
+                                            if (savedIds.contains(heroItem.watchlistKey)) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                            null,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(Modifier.width(6.dp))
+                                        Text("Watchlist", fontSize = 13.sp)
                                     }
                                 }
                             }
