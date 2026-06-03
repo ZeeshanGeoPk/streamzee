@@ -7,6 +7,7 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.webkit.PermissionRequest
 import android.webkit.SslErrorHandler
 import android.webkit.WebChromeClient
@@ -14,6 +15,7 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -48,6 +50,24 @@ fun animePlayerScreen(
     context as android.app.Activity
 }
     var isFullScreen by remember { mutableStateOf(false) }
+    var hideCustomView by remember { mutableStateOf<(() -> Unit)?>(null) }
+
+    BackHandler {
+        if (isFullScreen) {
+            hideCustomView?.invoke()
+        } else {
+            activity.requestedOrientation =
+                android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+            onBack()
+        }
+    }
+
+    DisposableEffect(activity) {
+        activity.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        onDispose {
+            activity.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+    }
 
     DisposableEffect(Unit) {
         onDispose {
@@ -214,6 +234,10 @@ fun animePlayerScreen(
     activity.requestedOrientation =
         android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
 }
+
+    init {
+        hideCustomView = { onHideCustomView() }
+    }
 }
 
                     addJavascriptInterface(object {

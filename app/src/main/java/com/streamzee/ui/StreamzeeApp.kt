@@ -1,5 +1,6 @@
 package com.streamzee.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -40,12 +41,21 @@ import com.streamzee.viewmodel.Screen
 fun streamzeeApp(viewModel: MainViewModel) {
     val uiState = viewModel.uiState.collectAsState().value
     val screen = uiState.currentScreen
+    val goBack: () -> Unit = {
+        if (!viewModel.navigateBack() && screen !is Screen.Home) {
+            viewModel.openHome(addToBackStack = false)
+        }
+    }
 
     val showBottomBar = screen is Screen.Home ||
             screen is Screen.Search ||
             screen is Screen.Library ||
             screen is Screen.Downloads ||
             screen is Screen.Profile
+
+    BackHandler(enabled = screen !is Screen.Setup && (screen !is Screen.Home || uiState.backStack.isNotEmpty())) {
+        goBack()
+    }
 
     streamzeeTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = Color(0xFF050508)) {
@@ -161,7 +171,7 @@ fun streamzeeApp(viewModel: MainViewModel) {
                     )
                     is Screen.HomeBrowse -> homeBrowseScreen(
                         browseState = uiState.homeBrowse,
-                        onBack = viewModel::openHome,
+                        onBack = goBack,
                         onLoadMore = viewModel::loadNextHomeBrowsePage,
                         onMovieClicked = viewModel::openDetails,
                         onAnimeClicked = viewModel::openAnimeDetails,
@@ -177,7 +187,7 @@ fun streamzeeApp(viewModel: MainViewModel) {
                         onModeSelected = viewModel::updateSearchMode,
                         onMovieClicked = viewModel::openDetails,
                         onAnimeClicked = viewModel::openAnimeDetails,
-                        onBack = viewModel::openHome,
+                        onBack = goBack,
                         isSearching = uiState.isSearching,
                         errorMessage = uiState.errorMessage,
                         modifier = contentModifier,
@@ -188,7 +198,7 @@ fun streamzeeApp(viewModel: MainViewModel) {
                         savedIds = uiState.savedIds,
                         isLoading = uiState.isLoadingSaved,
                         errorMessage = uiState.errorMessage,
-                        onBack = { viewModel.openHome() },
+                        onBack = goBack,
                         onMovieClicked = { viewModel.openDetails(it) },
                         onAnimeClicked = { anime ->
                             // Convert the library object back to the Details-compatible object
@@ -208,7 +218,7 @@ fun streamzeeApp(viewModel: MainViewModel) {
                     )
                     is Screen.Downloads -> downloadsScreen(
                         uiState = uiState,
-                        onBack = viewModel::openHome,
+                        onBack = goBack,
                         modifier = contentModifier,
                     )
                     is Screen.Profile -> profileScreen(
@@ -218,7 +228,7 @@ fun streamzeeApp(viewModel: MainViewModel) {
                         updateLanguage = viewModel::updateLanguagePreference,
                         toggleSubtitles = viewModel::toggleSubtitles,
                         toggleNotifications = viewModel::toggleNotifications,
-                        onLogout = viewModel::openHome,
+                        onLogout = { viewModel.openHome() },
                         modifier = contentModifier,
                     )
                     is Screen.Details -> { 
@@ -231,7 +241,7 @@ fun streamzeeApp(viewModel: MainViewModel) {
                         similarMovies = uiState.trendingMovies,
                         resumePositionMs = uiState.currentMovieWatchProgressMs,
                         isSaved = uiState.savedIds.contains(movieKey),
-                        onBack = viewModel::openHome,
+                        onBack = goBack,
                         onToggleSave = { viewModel.toggleSaved(it) },
                         onPlay = { id, season, episode, position -> 
                                     viewModel.openPlayer(
@@ -252,7 +262,7 @@ fun streamzeeApp(viewModel: MainViewModel) {
                         movie = screen.movie,
                         source = screen.source,
                         resumePositionMs = uiState.currentMovieWatchProgressMs,
-                        onBack = { viewModel.openDetails(screen.movie) },
+                        onBack = goBack,
                         onPlaybackPositionUpdate = { pos, s, e -> 
                             // If the movie is a TV show, we ALWAYS save the season/episode 
                             // even if the timestamp (pos) is 0.
@@ -276,7 +286,7 @@ fun streamzeeApp(viewModel: MainViewModel) {
                         errorMessage = uiState.errorMessage,
                         selectedTranslation = uiState.selectedTranslationType,
                         onTranslationChange = { viewModel.updateAnimeTranslation(it) },
-                        onBack = { viewModel.openSearch() },
+                        onBack = goBack,
                         onToggleSave = { viewModel.toggleSaved(it) },
                         isSaved = uiState.savedIds.contains(animeKey),
                         onPlayEpisode = { epNum -> viewModel.playAnime(screen.show, epNum) },
@@ -288,7 +298,7 @@ fun streamzeeApp(viewModel: MainViewModel) {
                         show = screen.show,
                         episode = screen.episode,
                         streamUrl = screen.streamUrl, // Add this
-                        onBack = { viewModel.openAnimeDetails(screen.show) },
+                        onBack = goBack,
                         modifier = contentModifier,
                     )
                 }

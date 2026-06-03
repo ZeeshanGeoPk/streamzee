@@ -5,6 +5,7 @@ import androidx.compose.ui.platform.LocalContext
 import android.app.Activity
 import android.content.pm.ActivityInfo
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.widget.FrameLayout
 import android.webkit.PermissionRequest
 import android.webkit.SslErrorHandler
@@ -13,6 +14,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import android.view.View
 import android.webkit.WebSettings
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -75,9 +77,29 @@ fun playerScreen(
     val activity = remember(context) {
         context as Activity
     }
+
+    DisposableEffect(activity) {
+        activity.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        onDispose {
+            activity.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+    }
     
     var isFullScreen by remember {
         mutableStateOf(false)
+    }
+
+    var hideCustomView by remember {
+        mutableStateOf<(() -> Unit)?>(null)
+    }
+
+    BackHandler {
+        if (isFullScreen) {
+            hideCustomView?.invoke()
+        } else {
+            activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            onBack()
+        }
     }
 
     // NEW
@@ -298,6 +320,10 @@ fun playerScreen(
                                 activity.requestedOrientation =
                                     ActivityInfo
                                         .SCREEN_ORIENTATION_PORTRAIT
+                            }
+
+                            init {
+                                hideCustomView = { onHideCustomView() }
                             }
                         }
 

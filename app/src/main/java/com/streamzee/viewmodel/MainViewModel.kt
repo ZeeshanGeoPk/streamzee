@@ -97,6 +97,7 @@ data class MainUiState(
     val lastWatchedEpisode: Int? = null,
     val currentSeasonEpisodes: List<TmdbEpisode> = emptyList(),
     val currentScreen: Screen = Screen.Setup,
+    val backStack: List<Screen> = emptyList(),
     val trendingMovies: List<TmdbMovie> = emptyList(),
     val savedIds: Set<String> = emptySet(),
     val savedMovies: List<TmdbMovie> = emptyList(),
@@ -168,6 +169,55 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(MainUiState())
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
+
+    private fun navigateTo(screen: Screen, addToBackStack: Boolean = true) {
+        _uiState.update { state ->
+            val nextBackStack = if (
+                addToBackStack &&
+                state.currentScreen !is Screen.Setup &&
+                state.currentScreen != screen
+            ) {
+                state.backStack + state.currentScreen
+            } else {
+                state.backStack
+            }
+
+            state.copy(
+                currentScreen = screen,
+                backStack = nextBackStack,
+                errorMessage = null,
+                currentMovieWatchProgressMs = null,
+            )
+        }
+    }
+
+    fun navigateBack(): Boolean {
+        val previous = _uiState.value.backStack.lastOrNull() ?: return false
+
+        _uiState.update {
+            it.copy(
+                currentScreen = previous,
+                backStack = it.backStack.dropLast(1),
+                errorMessage = null,
+                currentMovieWatchProgressMs = if (previous is Screen.Player) it.currentMovieWatchProgressMs else null,
+            )
+        }
+
+        if (previous is Screen.Library) {
+            val ids = _uiState.value.savedIds
+            loadSavedMovies(_uiState.value.apiKey, ids)
+            loadSavedAnime(ids)
+        }
+
+        if (previous is Screen.Details) {
+            if (previous.movie.isTv) {
+                loadSeason(previous.movie.tmdbID, _uiState.value.lastWatchedSeason ?: 1)
+            }
+            loadWatchProgress(previous.movie.tmdbID.toString())
+        }
+
+        return true
+    }
 
     init {
         viewModelScope.launch {
@@ -305,7 +355,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             try {
                 repository.saveApiKey(apiKey)
-                _uiState.update { it.copy(isLoading = false, currentScreen = Screen.Home) }
+                _uiState.update { it.copy(isLoading = false, currentScreen = Screen.Home, backStack = emptyList()) }
                 loadHomeContent(apiKey)
             } catch (exception: Exception) {
                 _uiState.update {
@@ -372,19 +422,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun openHome() {
-        _uiState.update { it.copy(currentScreen = Screen.Home, errorMessage = null, currentMovieWatchProgressMs = null) }
+    fun openHome(addToBackStack: Boolean = true) {
+        navigateTo(Screen.Home, addToBackStack)
     }
 
     fun openHomeBrowse(section: HomeSection) {
-        _uiState.update {
-            it.copy(
-                currentScreen = Screen.HomeBrowse(section),
-                homeBrowse = HomeBrowseUiState(section = section),
-                errorMessage = null,
-                currentMovieWatchProgressMs = null,
-            )
-        }
+        navigateTo(Screen.HomeBrowse(section))
+        _uiState.update { it.copy(homeBrowse = HomeBrowseUiState(section = section)) }
         loadNextHomeBrowsePage()
     }
 
@@ -475,22 +519,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
 
     fun openSearch() {
-        _uiState.update { it.copy(currentScreen = Screen.Search, errorMessage = null, currentMovieWatchProgressMs = null) }
+        navigateTo(Screen.Search)
     }
 
     fun openLibrary() {
         val ids = _uiState.value.savedIds
-        _uiState.update { it.copy(currentScreen = Screen.Library, errorMessage = null, currentMovieWatchProgressMs = null) }
+        navigateTo(Screen.Library)
         loadSavedMovies(_uiState.value.apiKey, ids)
         loadSavedAnime(ids) // Added this line
     }
 
     fun openDownloads() {
-        _uiState.update { it.copy(currentScreen = Screen.Downloads, errorMessage = null, currentMovieWatchProgressMs = null) }
+        navigateTo(Screen.Downloads)
     }
 
     fun openProfile() {
-        _uiState.update { it.copy(currentScreen = Screen.Profile, errorMessage = null, currentMovieWatchProgressMs = null) }
+        navigateTo(Screen.Profile)
     }
 
     fun updateThemeMode(mode: String) {
@@ -516,6 +560,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun openDetails(movie: TmdbMovie) {
         viewModelScope.launch {
             val apiKey = _uiState.value.apiKey ?: return@launch
+            val previousScreen = _uiState.value.currentScreen
             _uiState.update { it.copy(isLoading = true) }
             try {
                 // Fetch FULL details to get 'numberOfSeasons' and 'firstAirDate'
@@ -525,11 +570,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     repository.getMovieDetails(apiKey, movie.tmdbID.toString())
                 }
                 
-                _uiState.update { it.copy(
-                    currentScreen = Screen.Details(fullMovie), 
-                    currentSeasonEpisodes = emptyList(),
-                    isLoading = false 
-                )}
+                _uiState.update {
+                    val nextBackStack = if (previousScreen !is Screen.Setup) {
+                        it.backStack + previousScreen
+                    } else {
+                        it.backStack
+                    }
+
+                    it.copy(
+                        currentScreen = Screen.Details(fullMovie),
+                        backStack = nextBackStack,
+                        currentSeasonEpisodes = emptyList(),
+                        isLoading = false,
+                    )
+                }
                 
                 if (fullMovie.isTv) loadSeason(fullMovie.tmdbID, 1)
                 loadWatchProgress(fullMovie.tmdbID.toString())
@@ -547,13 +601,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             MegaPlayEpisode(number = it, episodeEmbedId = "") // Embed ID is empty because we use MAL ID
         }
 
+        navigateTo(Screen.AnimeDetails(show))
         _uiState.update { state ->
-            state.copy(
-                currentScreen = Screen.AnimeDetails(show),
-                animeEpisodes = generatedEpisodes,
-                isLoading = false,
-                errorMessage = null
-            )
+            state.copy(animeEpisodes = generatedEpisodes, isLoading = false, errorMessage = null)
         }
     }
 
@@ -564,10 +614,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // show.animeMalID is the MAL ID we got from Jikan
         val megaPlayUrl = "https://megaplay.buzz/stream/mal/${show.animeMalID}/$episodeNumber/$language"
         
-        _uiState.update { it.copy(
-            currentScreen = Screen.AnimePlayer(show, episodeNumber, megaPlayUrl),
-            errorMessage = null
-        )}
+        navigateTo(Screen.AnimePlayer(show, episodeNumber, megaPlayUrl))
     }
     
     
@@ -590,7 +637,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         tvEpisode: Int? = null,
         resumePositionMs: Long? = null,
     ) {
-        _uiState.update { it.copy(currentScreen = Screen.Player(movie, source, tvSeason, tvEpisode, resumePositionMs), errorMessage = null) }
+        navigateTo(Screen.Player(movie, source, tvSeason, tvEpisode, resumePositionMs), addToBackStack = false)
+        _uiState.update {
+            val current = it.currentScreen
+            val shouldAddDetails = it.backStack.lastOrNull() !is Screen.Details
+            val nextBackStack = if (shouldAddDetails) {
+                it.backStack + Screen.Details(movie)
+            } else {
+                it.backStack
+            }
+
+            it.copy(
+                currentScreen = current,
+                backStack = nextBackStack,
+                currentMovieWatchProgressMs = resumePositionMs,
+            )
+        }
     }
     
     fun updateAnimeTranslation(type: String) {
