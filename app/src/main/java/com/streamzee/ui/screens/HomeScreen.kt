@@ -30,6 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.streamzee.data.MegaPlayShow
 import com.streamzee.data.TmdbMovie
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.seconds
@@ -45,25 +46,27 @@ private val ScreenBg = Color(0xFF050508)
 @Composable
 fun homeScreen(
     trendingMovies: List<TmdbMovie>,
+    trendingTv: List<TmdbMovie>,
+    trendingAnime: List<MegaPlayShow>,
+    recentMovies: List<TmdbMovie>,
+    recentTv: List<TmdbMovie>,
+    recentAnime: List<MegaPlayShow>,
+    topMovies: List<TmdbMovie>,
+    topTv: List<TmdbMovie>,
+    topAnime: List<MegaPlayShow>,
     savedIds: Set<String>,
     onSearchClicked: () -> Unit,
     onLibraryClicked: () -> Unit,
     onMovieClicked: (TmdbMovie) -> Unit,
+    onAnimeClicked: (MegaPlayShow) -> Unit,
     onToggleSave: (String) -> Unit,
     isLoading: Boolean,
     errorMessage: String?,
     modifier: Modifier = Modifier,
 ) {
     // Split trending into hero (first 5) and rows
-    val heroMovies = trendingMovies.take(5)
-    val continueWatching = trendingMovies.drop(5).take(6) // Simulated continue watching
-    val trendingNow = trendingMovies.drop(2).take(8)
-    val popularAnime = trendingMovies.filter { 
-        it.displayTitle.contains("anime", ignoreCase = true) ||
-        it.genreIds?.containsAll(listOf(16)) == true
-    }.ifEmpty { trendingMovies.drop(8).take(6) }
-    val newMovies = trendingMovies.drop(4).take(8)
-    val topRated = trendingMovies.sortedByDescending { it.voteAverage ?: 0.0 }.take(8)
+    val heroMovies = (trendingMovies + trendingTv).take(5)
+    val continueWatching = (trendingMovies + trendingTv).drop(5).take(6) // Simulated continue watching
 
     LazyColumn(
         modifier = modifier
@@ -209,13 +212,13 @@ fun homeScreen(
                                         Text("Play", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                                     }
                                     OutlinedButton(
-                                        onClick = { onToggleSave(movie.tmdbID.toString()) },
+                                        onClick = { onToggleSave(movie.watchlistKey) },
                                         shape = RoundedCornerShape(24.dp),
                                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                                         colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
                                     ) {
                                         Icon(
-                                            if (savedIds.contains(movie.tmdbID.toString())) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                            if (savedIds.contains(movie.watchlistKey)) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                             null,
                                             modifier = Modifier.size(16.dp)
                                         )
@@ -293,61 +296,130 @@ fun homeScreen(
             }
         }
 
-        // ── Trending Now ─────────────────────────────────────────
-        if (trendingNow.isNotEmpty()) {
-            item { sectionHeader("🔥 Trending Now", "See all") }
+        // ── Trending ─────────────────────────────────────────────
+        if (trendingMovies.isNotEmpty()) {
+            item { sectionHeader("Trending Movies", "See all") }
             item {
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(trendingNow) { movie ->
+                    items(trendingMovies) { movie ->
                         posterCard(movie = movie, onClick = { onMovieClicked(movie) })
                     }
                 }
             }
         }
 
-        // ── Popular Anime ────────────────────────────────────────
-        if (popularAnime.isNotEmpty()) {
-            item { sectionHeader("🎌 Popular Anime", "See all") }
+        if (trendingTv.isNotEmpty()) {
+            item { sectionHeader("Trending TV Shows", "See all") }
             item {
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(popularAnime) { movie ->
+                    items(trendingTv) { show ->
+                        posterCard(movie = show, onClick = { onMovieClicked(show) })
+                    }
+                }
+            }
+        }
+
+        if (trendingAnime.isNotEmpty()) {
+            item { sectionHeader("Trending Anime", "See all") }
+            item {
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(trendingAnime) { anime ->
+                        animePosterCard(show = anime, onClick = { onAnimeClicked(anime) })
+                    }
+                }
+            }
+        }
+
+        // ── New ─────────────────────────────────────────────────
+        if (recentMovies.isNotEmpty()) {
+            item { sectionHeader("New Movies", "See all") }
+            item {
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(recentMovies) { movie ->
                         posterCard(movie = movie, onClick = { onMovieClicked(movie) })
                     }
                 }
             }
         }
 
-        // ── New Movies ───────────────────────────────────────────
-        if (newMovies.isNotEmpty()) {
-            item { sectionHeader("🆕 New Movies", "See all") }
+        if (recentTv.isNotEmpty()) {
+            item { sectionHeader("New TV Shows", "See all") }
             item {
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(newMovies) { movie ->
-                        posterCard(movie = movie, onClick = { onMovieClicked(movie) })
+                    items(recentTv) { show ->
+                        posterCard(movie = show, onClick = { onMovieClicked(show) })
+                    }
+                }
+            }
+        }
+
+        if (recentAnime.isNotEmpty()) {
+            item { sectionHeader("New Anime", "See all") }
+            item {
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(recentAnime) { anime ->
+                        animePosterCard(show = anime, onClick = { onAnimeClicked(anime) })
                     }
                 }
             }
         }
 
         // ── Top Rated ────────────────────────────────────────────
-        if (topRated.isNotEmpty()) {
-            item { sectionHeader("⭐ Top Rated Series", "See all") }
+        if (topMovies.isNotEmpty()) {
+            item { sectionHeader("Top Movies", "See all") }
             item {
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(topRated) { movie ->
+                    items(topMovies) { movie ->
                         topRatedCard(movie = movie, onClick = { onMovieClicked(movie) })
+                    }
+                }
+            }
+        }
+
+        if (topTv.isNotEmpty()) {
+            item { sectionHeader("Top TV Shows", "See all") }
+            item {
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(topTv) { show ->
+                        topRatedCard(movie = show, onClick = { onMovieClicked(show) })
+                    }
+                }
+            }
+        }
+
+        if (topAnime.isNotEmpty()) {
+            item { sectionHeader("Top Anime", "See all") }
+            item {
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(topAnime) { anime ->
+                        animePosterCard(show = anime, onClick = { onAnimeClicked(anime) }, showScore = true)
                     }
                 }
             }
@@ -369,6 +441,9 @@ private fun sectionHeader(title: String, action: String) {
         Text(action, color = Purple, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
     }
 }
+
+private val TmdbMovie.watchlistKey: String
+    get() = if (isTv) "tv_$tmdbID" else "movie_$tmdbID"
 
 // ── Continue Watching Card ───────────────────────────────────────
 @Composable
@@ -481,6 +556,81 @@ private fun posterCard(movie: TmdbMovie, onClick: () -> Unit) {
                 fontSize = 11.sp
             )
         }
+    }
+}
+
+// ── Anime Poster Card ───────────────────────────────────────────
+@Composable
+private fun animePosterCard(show: MegaPlayShow, onClick: () -> Unit, showScore: Boolean = false) {
+    Column(
+        modifier = Modifier
+            .width(130.dp)
+            .clickable(onClick = onClick)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(190.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color(0xFF2C2C3E)),
+            contentAlignment = Alignment.Center
+        ) {
+            if (!show.thumbnail.isNullOrBlank()) {
+                AsyncImage(
+                    model = show.thumbnail,
+                    contentDescription = show.name,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Icon(
+                    Icons.Default.Movie,
+                    contentDescription = null,
+                    tint = TextSecondary,
+                    modifier = Modifier.size(32.dp)
+                )
+            }
+
+            if (showScore && !show.score.isNullOrBlank() && show.score != "N/A") {
+                Box(
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .align(Alignment.TopEnd)
+                        .background(Color(0xCC000000), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 6.dp, vertical = 3.dp)
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(3.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Star, null, tint = Color(0xFFFBBF24), modifier = Modifier.size(12.dp))
+                        Text(
+                            show.score,
+                            color = Color.White,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        Text(
+            show.name,
+            color = Color.White,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Text(
+            listOfNotNull(show.animeType, show.episodeCount?.takeIf { it > 0 }?.let { "$it eps" })
+                .joinToString(" • "),
+            color = TextSecondary,
+            fontSize = 11.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 

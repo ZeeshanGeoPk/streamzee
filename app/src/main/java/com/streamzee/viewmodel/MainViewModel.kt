@@ -15,8 +15,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
 //val movies = repository.fetchTrending(apiKey)
@@ -89,6 +90,15 @@ data class MainUiState(
     val isSearchingSubtitles: Boolean = false,
     val subtitleErrorMessage: String? = null,
     val errorMessage: String? = null,
+    val trendingAll: List<TmdbMovie> = emptyList(),
+    val trendingTv: List<TmdbMovie> = emptyList(),
+    val trendingAnime: List<MegaPlayShow> = emptyList(),
+    val topMovies: List<TmdbMovie> = emptyList(),
+    val topTv: List<TmdbMovie> = emptyList(),
+    val topAnime: List<MegaPlayShow> = emptyList(),
+    val recentMovies: List<TmdbMovie> = emptyList(),
+    val recentTv: List<TmdbMovie> = emptyList(),
+    val recentAnime: List<MegaPlayShow> = emptyList(),
     
     // Premium custom states
     val themeMode: String = "Dark",
@@ -117,6 +127,18 @@ data class MainUiState(
     val animeEpisodes: List<MegaPlayEpisode> = emptyList() // Added
 )
 
+private data class HomeContent(
+    val trendingMovies: List<TmdbMovie>,
+    val trendingTv: List<TmdbMovie>,
+    val trendingAnime: List<MegaPlayShow>,
+    val recentMovies: List<TmdbMovie>,
+    val recentTv: List<TmdbMovie>,
+    val recentAnime: List<MegaPlayShow>,
+    val topMovies: List<TmdbMovie>,
+    val topTv: List<TmdbMovie>,
+    val topAnime: List<MegaPlayShow>,
+)
+
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = StreamzeeRepository(NetworkClient.tmdbApi, application)
 
@@ -137,7 +159,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     state.copy(apiKey = apiKey, currentScreen = screen, errorMessage = null)
                 }
                 if (!apiKey.isNullOrBlank()) {
-                    loadTrending(apiKey)
+                    loadHomeContent(apiKey)
                 }
             }
         }
@@ -260,7 +282,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 repository.saveApiKey(apiKey)
                 _uiState.update { it.copy(isLoading = false, currentScreen = Screen.Home) }
-                loadTrending(apiKey)
+                loadHomeContent(apiKey)
             } catch (exception: Exception) {
                 _uiState.update {
                     it.copy(
@@ -272,17 +294,54 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun loadTrending(apiKey: String) {
+    private fun loadHomeContent(apiKey: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             try {
-                val movies = repository.fetchTrending(apiKey)
-                _uiState.update { it.copy(trendingMovies = movies, isLoading = false) }
+                val content = coroutineScope {
+                    val trendingMovies = async { runCatching { repository.fetchTrendingMovies(apiKey) }.getOrDefault(emptyList()) }
+                    val trendingTv = async { runCatching { repository.fetchTrendingTv(apiKey) }.getOrDefault(emptyList()) }
+                    val trendingAnime = async { runCatching { repository.fetchTrendingAnime() }.getOrDefault(emptyList()) }
+                    val recentMovies = async { runCatching { repository.fetchRecentMovies(apiKey) }.getOrDefault(emptyList()) }
+                    val recentTv = async { runCatching { repository.fetchRecentTv(apiKey) }.getOrDefault(emptyList()) }
+                    val recentAnime = async { runCatching { repository.fetchRecentAnime() }.getOrDefault(emptyList()) }
+                    val topMovies = async { runCatching { repository.fetchTopMovies(apiKey) }.getOrDefault(emptyList()) }
+                    val topTv = async { runCatching { repository.fetchTopTv(apiKey) }.getOrDefault(emptyList()) }
+                    val topAnime = async { runCatching { repository.fetchTopAnime() }.getOrDefault(emptyList()) }
+
+                    HomeContent(
+                        trendingMovies = trendingMovies.await(),
+                        trendingTv = trendingTv.await(),
+                        trendingAnime = trendingAnime.await(),
+                        recentMovies = recentMovies.await(),
+                        recentTv = recentTv.await(),
+                        recentAnime = recentAnime.await(),
+                        topMovies = topMovies.await(),
+                        topTv = topTv.await(),
+                        topAnime = topAnime.await(),
+                    )
+                }
+
+                _uiState.update {
+                    it.copy(
+                        trendingMovies = content.trendingMovies,
+                        trendingAll = content.trendingMovies + content.trendingTv,
+                        trendingTv = content.trendingTv,
+                        trendingAnime = content.trendingAnime,
+                        recentMovies = content.recentMovies,
+                        recentTv = content.recentTv,
+                        recentAnime = content.recentAnime,
+                        topMovies = content.topMovies,
+                        topTv = content.topTv,
+                        topAnime = content.topAnime,
+                        isLoading = false,
+                    )
+                }
             } catch (exception: Exception) {
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        errorMessage = "Unable to load trending movies: ${exception.message ?: "network error"}",
+                        errorMessage = "Unable to load home content: ${exception.message ?: "network error"}",
                     )
                 }
             }

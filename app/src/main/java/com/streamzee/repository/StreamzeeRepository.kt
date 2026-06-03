@@ -4,7 +4,6 @@ import android.content.Context
 import com.streamzee.data.AppDataStore
 import com.streamzee.data.TmdbApi
 import com.streamzee.data.MegaPlayShow
-import com.streamzee.data.MegaPlaySeriesResponse
 import com.streamzee.data.MegaPlayEpisode
 import com.streamzee.data.JikanAnime
 import com.streamzee.data.TmdbMovie
@@ -48,6 +47,42 @@ class StreamzeeRepository(
 
     suspend fun fetchTrending(apiKey: String): List<TmdbMovie> {
         return api.getTrendingAll("Bearer $apiKey").results
+    }
+
+    suspend fun fetchTrendingMovies(apiKey: String): List<TmdbMovie> {
+        return api.getTrendingMovies("Bearer $apiKey").results.asMovies()
+    }
+
+    suspend fun fetchTrendingTv(apiKey: String): List<TmdbMovie> {
+        return api.getTrendingTv("Bearer $apiKey").results.asTvShows()
+    }
+
+    suspend fun fetchRecentMovies(apiKey: String): List<TmdbMovie> {
+        return api.getRecentMovies("Bearer $apiKey").results.asMovies()
+    }
+
+    suspend fun fetchRecentTv(apiKey: String): List<TmdbMovie> {
+        return api.getRecentTv("Bearer $apiKey").results.asTvShows()
+    }
+
+    suspend fun fetchTopMovies(apiKey: String): List<TmdbMovie> {
+        return api.getTopMovies("Bearer $apiKey").results.asMovies()
+    }
+
+    suspend fun fetchTopTv(apiKey: String): List<TmdbMovie> {
+        return api.getTopTv("Bearer $apiKey").results.asTvShows()
+    }
+
+    suspend fun fetchTrendingAnime(): List<MegaPlayShow> = withContext(Dispatchers.IO) {
+        api.getTopAnime(filter = "bypopularity").data.toMegaPlayShows()
+    }
+
+    suspend fun fetchRecentAnime(): List<MegaPlayShow> = withContext(Dispatchers.IO) {
+        api.getRecentAnime().data.toMegaPlayShows()
+    }
+
+    suspend fun fetchTopAnime(): List<MegaPlayShow> = withContext(Dispatchers.IO) {
+        api.getTopAnime().data.toMegaPlayShows()
     }
 
     suspend fun searchMovies(apiKey: String, query: String): List<TmdbMovie> {
@@ -239,19 +274,28 @@ class StreamzeeRepository(
 
     suspend fun searchAnime(query: String): List<MegaPlayShow> = withContext(Dispatchers.IO) {
         val jikanResults = api.searchJikan(query)
-        jikanResults.data.map { 
+        jikanResults.data.toMegaPlayShows()
+    }
+
+    suspend fun getAnimeById(malId: Int): JikanAnime {
+        return api.getAnimeById(malId).data
+    }
+
+    private fun List<TmdbMovie>.asMovies(): List<TmdbMovie> =
+        map { it.copy(mediaType = "movie") }
+
+    private fun List<TmdbMovie>.asTvShows(): List<TmdbMovie> =
+        map { it.copy(mediaType = "tv") }
+
+    private fun List<JikanAnime>.toMegaPlayShows(): List<MegaPlayShow> =
+        map {
             MegaPlayShow(
                 animeMalID = it.malId.toString(),
                 title = it.title,
                 image = it.images.jpg.imageUrl,
                 animeType = it.type,
                 episodeCount = it.episodes ?: 0,
-                score = it.score?.let { s -> String.format("%.1f", s) } ?: "N/A"
+                score = it.score?.let { score -> String.format("%.1f", score) } ?: "N/A"
             )
         }
-    }
-    
-    suspend fun getAnimeById(malId: Int): JikanAnime {
-        return api.getAnimeById(malId).data
-    }
 }

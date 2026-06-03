@@ -11,6 +11,11 @@ interface TmdbApi {
         @Header("Authorization") authorization: String,
     ): TmdbMovieResponse
 
+    @GET("trending/tv/week")
+    suspend fun getTrendingTv(
+        @Header("Authorization") authorization: String,
+    ): TmdbMovieResponse
+
     @GET("search/movie")
     suspend fun searchMovies(
         @Header("Authorization") authorization: String,
@@ -61,4 +66,28 @@ interface TmdbApi {
     suspend fun getAnimeById(
         @Path("anime_id") animeId: Int
     ): JikanAnimeResponse
+
+    // For Home Screen Recommendations
+    // Movies
+    @GET("movie/now_playing")
+    suspend fun getRecentMovies(@Header("Authorization") auth: String): TmdbMovieResponse
+
+    @GET("movie/top_rated")
+    suspend fun getTopMovies(@Header("Authorization") auth: String): TmdbMovieResponse
+
+    // TV
+    @GET("tv/on_the_air")
+    suspend fun getRecentTv(@Header("Authorization") auth: String): TmdbMovieResponse
+
+    @GET("tv/top_rated")
+    suspend fun getTopTv(@Header("Authorization") auth: String): TmdbMovieResponse
+
+    // Anime (Jikan)
+    @GET("https://api.jikan.moe/v4/top/anime")
+    suspend fun getTopAnime(
+        @Query("filter") filter: String? = null,
+    ): JikanSearchResponse
+
+    @GET("https://api.jikan.moe/v4/seasons/now")
+    suspend fun getRecentAnime(): JikanSearchResponse
 }

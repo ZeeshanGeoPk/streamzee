@@ -137,10 +137,19 @@ fun streamzeeApp(viewModel: MainViewModel) {
                     )
                     is Screen.Home -> homeScreen(
                         trendingMovies = uiState.trendingMovies,
+                        trendingTv = uiState.trendingTv,
+                        trendingAnime = uiState.trendingAnime,
+                        recentMovies = uiState.recentMovies,
+                        recentTv = uiState.recentTv,
+                        recentAnime = uiState.recentAnime,
+                        topMovies = uiState.topMovies,
+                        topTv = uiState.topTv,
+                        topAnime = uiState.topAnime,
                         savedIds = uiState.savedIds,
                         onSearchClicked = viewModel::openSearch,
                         onLibraryClicked = viewModel::openLibrary,
                         onMovieClicked = viewModel::openDetails,
+                        onAnimeClicked = viewModel::openAnimeDetails,
                         onToggleSave = { id ->
                             viewModel.toggleSaved(id)
                         },
