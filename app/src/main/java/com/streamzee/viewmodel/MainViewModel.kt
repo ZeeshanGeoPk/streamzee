@@ -10,6 +10,12 @@ import com.streamzee.data.TmdbEpisode
 import com.streamzee.data.MegaPlayShow
 import com.streamzee.data.MegaPlayEpisode
 import com.streamzee.data.JikanAnime
+import com.streamzee.data.DownloadItem
+import com.streamzee.data.DownloadMediaType
+import com.streamzee.data.DownloadSettings
+import com.streamzee.data.DownloadStorage
+import com.streamzee.data.StreamDownloadManager
+import com.streamzee.data.CapturedMediaStream
 import com.streamzee.repository.StreamzeeRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -67,22 +73,13 @@ sealed interface Screen {
         val translationType: String = "sub",
         val resumePositionMs: Long = 0L,
     ) : Screen
+    data class OfflinePlayer(val downloadId: String) : Screen
     object Setup : Screen
 }
 
 data class CustomCollection(
     val name: String,
     val itemCount: Int,
-    val imageUrl: String
-)
-
-data class DownloadItem(
-    val id: String,
-    val title: String,
-    val subtitle: String,
-    val sizeBytes: Long,
-    val downloadedBytes: Long,
-    var status: String, // "Downloading", "Paused", "Completed", "Failed"
     val imageUrl: String
 )
 
@@ -166,16 +163,10 @@ data class MainUiState(
         CustomCollection("Best Action Anime", 25, "https://image.tmdb.org/t/p/w500/1X6v4t7j5j1zQoFhY75kG4Qd81m.jpg"),
         CustomCollection("Family Watchlist", 18, "https://image.tmdb.org/t/p/w500/jRXYjXN1CYegZJ2gZo58BMj7u0T.jpg")
     ),
-    val downloadsQueue: List<DownloadItem> = listOf(
-        DownloadItem("dl_1", "Demon Slayer: Kimetsu no Yaiba", "S3 E5", 600_000_000L, 245_000_000L, "Downloading", "https://image.tmdb.org/t/p/w300/1X6v4t7j5j1zQoFhY75kG4Qd81m.jpg"),
-        DownloadItem("dl_2", "The Batman", "Movie", 1_200_000_000L, 300_000_000L, "Downloading", "https://image.tmdb.org/t/p/w300/74xTEgt7R36F650zOn25oHqggzV.jpg"),
-        DownloadItem("dl_3", "Jujutsu Kaisen", "S2 E10", 400_000_000L, 400_000_000L, "Paused", "https://image.tmdb.org/t/p/w300/oio9oVea5Y5iA8J9x3K1QZ51m.jpg"),
-        DownloadItem("dl_4", "Attack on Titan", "S4 (17 Episodes)", 4_200_000_000L, 4_200_000_000L, "Completed", "https://image.tmdb.org/t/p/w300/h56O0jfHwY7e47xO6Jb2tYVn3mC.jpg"),
-        DownloadItem("dl_5", "Puss in Boots: The Last Wish", "Movie", 1_100_000_000L, 1_100_000_000L, "Completed", "https://image.tmdb.org/t/p/w300/kuf6mR2IYH4szcc2653IY37jU55.jpg"),
-        DownloadItem("dl_6", "Breaking Bad", "S1 E1", 120_000_000L, 120_000_000L, "Failed", "https://image.tmdb.org/t/p/w300/ggFHwq43upj6H1jOb5870YjOE1Z.jpg")
-    ),
-    val storageUsedGb: Double = 45.6,
-    val storageTotalGb: Double = 128.0,
+    val downloadsQueue: List<DownloadItem> = emptyList(),
+    val downloadSettings: DownloadSettings = DownloadSettings(),
+    val downloadStorage: DownloadStorage = DownloadStorage(),
+    val downloadsPaused: Boolean = false,
     val selectedTranslationType: String = "sub", // Added
     val animeEpisodes: List<MegaPlayEpisode> = emptyList() // Added
 )
@@ -194,6 +185,7 @@ private data class HomeContent(
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = StreamzeeRepository(NetworkClient.tmdbApi, application)
+    private val downloadManager = StreamDownloadManager.get(application)
     private var continueWatchingJob: Job? = null
     private var movieWatchProgressJob: Job? = null
     private var animeWatchProgressJob: Job? = null
@@ -314,6 +306,30 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         reducedMotion = preferences.reducedMotion,
                     )
                 }
+            }
+        }
+
+        viewModelScope.launch {
+            downloadManager.downloads.collectLatest { downloads ->
+                _uiState.update { it.copy(downloadsQueue = downloads) }
+            }
+        }
+
+        viewModelScope.launch {
+            downloadManager.settings.collectLatest { settings ->
+                _uiState.update { it.copy(downloadSettings = settings) }
+            }
+        }
+
+        viewModelScope.launch {
+            downloadManager.storage.collectLatest { storage ->
+                _uiState.update { it.copy(downloadStorage = storage) }
+            }
+        }
+
+        viewModelScope.launch {
+            downloadManager.downloadsPaused.collectLatest { paused ->
+                _uiState.update { it.copy(downloadsPaused = paused) }
             }
         }
     }
@@ -807,6 +823,75 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun openDownloads() {
         navigateTo(Screen.Downloads)
+    }
+
+    fun queueMovieDownload(movie: TmdbMovie, stream: CapturedMediaStream) {
+        val id = "movie_${movie.tmdbID}"
+        downloadManager.queue(
+            id = id,
+            title = movie.displayTitle,
+            subtitle = "Movie",
+            imageUrl = movie.posterPath?.let { "https://image.tmdb.org/t/p/w500$it" },
+            mediaType = DownloadMediaType.MOVIE,
+            pageUrl = stream.pageUrl,
+        )
+        downloadManager.markResolved(id, stream.url, stream.mimeType, stream.requestHeaders)
+    }
+
+    fun queueTvEpisodeDownload(
+        movie: TmdbMovie,
+        season: Int,
+        episode: Int,
+        stream: CapturedMediaStream,
+    ) {
+        val id = "tv_${movie.tmdbID}_s${season}_e${episode}"
+        downloadManager.queue(
+            id = id,
+            title = movie.displayTitle,
+            subtitle = "S$season E$episode",
+            imageUrl = movie.posterPath?.let { "https://image.tmdb.org/t/p/w500$it" },
+            mediaType = DownloadMediaType.TV_EPISODE,
+            pageUrl = stream.pageUrl,
+        )
+        downloadManager.markResolved(id, stream.url, stream.mimeType, stream.requestHeaders)
+    }
+
+    fun queueAnimeEpisodeDownload(
+        show: MegaPlayShow,
+        episode: Int,
+        stream: CapturedMediaStream,
+    ) {
+        val language = _uiState.value.selectedTranslationType
+        val id = "anime_${show.animeID}_e${episode}_$language"
+        downloadManager.queue(
+            id = id,
+            title = show.name,
+            subtitle = "Episode $episode - ${language.uppercase()}",
+            imageUrl = show.thumbnail,
+            mediaType = DownloadMediaType.ANIME_EPISODE,
+            pageUrl = stream.pageUrl,
+        )
+        downloadManager.markResolved(id, stream.url, stream.mimeType, stream.requestHeaders)
+    }
+
+    fun pauseDownload(id: String) = downloadManager.pause(id)
+
+    fun resumeDownload(id: String) = downloadManager.resume(id)
+
+    fun retryDownload(id: String) = downloadManager.retry(id)
+
+    fun removeDownload(id: String) = downloadManager.remove(id)
+
+    fun pauseAllDownloads() = downloadManager.pauseAll()
+
+    fun resumeAllDownloads() = downloadManager.resumeAll()
+
+    fun updateDownloadSettings(settings: DownloadSettings) {
+        downloadManager.updateSettings(settings)
+    }
+
+    fun playOfflineDownload(id: String) {
+        navigateTo(Screen.OfflinePlayer(id))
     }
 
     fun openProfile() {

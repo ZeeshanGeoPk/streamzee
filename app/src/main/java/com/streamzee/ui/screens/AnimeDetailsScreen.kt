@@ -98,7 +98,7 @@ fun animeDetailsScreen(
                 items(episodes) { episode ->
                     episodeGridCard(
                         num = episode.number.toString(),
-                        onClick = { onPlayEpisode(episode.number) }
+                        onClick = { onPlayEpisode(episode.number) },
                     )
                 }
             }
@@ -352,7 +352,10 @@ private fun translationToggle(selected: String, onToggle: (String) -> Unit) {
 }
 
 @Composable
-private fun episodeGridCard(num: String, onClick: () -> Unit) {
+private fun episodeGridCard(
+    num: String,
+    onClick: () -> Unit,
+) {
     Surface(
         modifier = Modifier
             .padding(horizontal = 4.dp)
@@ -363,7 +366,10 @@ private fun episodeGridCard(num: String, onClick: () -> Unit) {
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
                 Text(
                     num,
                     color = MaterialTheme.colorScheme.onSurface,

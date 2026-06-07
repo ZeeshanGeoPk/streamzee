@@ -1,5 +1,6 @@
 package com.streamzee.ui.screens
 
+import android.annotation.SuppressLint
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.ui.platform.LocalContext
 import android.app.Activity
@@ -22,6 +23,8 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -55,8 +58,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.streamzee.data.PlaybackSource
+import com.streamzee.data.CapturedMediaStream
+import com.streamzee.data.StreamDownloadManager
 import com.streamzee.data.TmdbMovie
 import com.streamzee.data.movieTvPlayerSources
+import java.util.concurrent.atomic.AtomicBoolean
 
 private val ScreenBg: Color
     @Composable get() = MaterialTheme.colorScheme.background
@@ -64,6 +70,7 @@ private val Purple: Color
     @Composable get() = MaterialTheme.colorScheme.primary
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@SuppressLint("JavascriptInterface")
 @Composable
 fun playerScreen(
     movie: TmdbMovie,
@@ -71,6 +78,8 @@ fun playerScreen(
     resumePositionMs: Long?,
     onBack: () -> Unit,
     onPlaybackPositionUpdate: (Long, Int?, Int?) -> Unit,
+    isDownloadQueued: Boolean,
+    onDownload: (CapturedMediaStream) -> Unit,
     tvSeason: Int? = null,
     tvEpisode: Int? = null,
     modifier: Modifier = Modifier,
@@ -194,6 +203,12 @@ fun playerScreen(
         }
     var loadedUrl by remember {
         mutableStateOf<String?>(null)
+    }
+    var capturedStream by remember(movie.tmdbID, tvSeason, tvEpisode) {
+        mutableStateOf<CapturedMediaStream?>(null)
+    }
+    val streamCaptureClaimed = remember(movie.tmdbID, tvSeason, tvEpisode) {
+        AtomicBoolean(false)
     }
 
     Box(
@@ -368,6 +383,26 @@ fun playerScreen(
                                 handler?.proceed()
                             }
 
+                            override fun shouldInterceptRequest(
+                                view: WebView?,
+                                request: WebResourceRequest?,
+                            ): android.webkit.WebResourceResponse? {
+                                val mediaUrl = request?.url?.toString().orEmpty()
+                                if (
+                                    StreamDownloadManager.isDownloadableMediaUrl(mediaUrl) &&
+                                    streamCaptureClaimed.compareAndSet(false, true)
+                                ) {
+                                    val stream = CapturedMediaStream(
+                                        url = mediaUrl,
+                                        mimeType = StreamDownloadManager.inferMimeType(mediaUrl),
+                                        requestHeaders = request?.requestHeaders.orEmpty(),
+                                        pageUrl = currentUrl,
+                                    )
+                                    view?.post { capturedStream = stream }
+                                }
+                                return super.shouldInterceptRequest(view, request)
+                            }
+
                             override fun onPageFinished(view: WebView?, url: String?) {
                                 super.onPageFinished(view, url)
                                 view?.evaluateJavascript(
@@ -463,6 +498,35 @@ fun playerScreen(
 
                 Spacer(Modifier.weight(1f))
 
+                IconButton(
+                    onClick = {
+                        capturedStream?.let(onDownload)
+                    },
+                    enabled = capturedStream != null && !isDownloadQueued,
+                    modifier = Modifier.background(
+                        Color.DarkGray.copy(0.6f),
+                        CircleShape,
+                    ),
+                ) {
+                    Icon(
+                        if (isDownloadQueued) Icons.Default.Check else Icons.Default.Download,
+                        contentDescription = when {
+                            isDownloadQueued -> "Added to downloads"
+                            capturedStream != null -> "Download this video"
+                            else -> "Start playback to enable download"
+                        },
+                        tint = if (
+                            isDownloadQueued || capturedStream != null
+                        ) {
+                            Color.White
+                        } else {
+                            Color.Gray
+                        },
+                    )
+                }
+
+                Spacer(Modifier.width(8.dp))
+
 ExposedDropdownMenuBox(
     expanded = showSourceDialog,
     onExpandedChange = {
@@ -505,6 +569,8 @@ ExposedDropdownMenuBox(
                 onClick = {
                     currentSourceIndex = index
                     currentCandidateIndex = 0
+                    capturedStream = null
+                    streamCaptureClaimed.set(false)
                     showSourceDialog = false
                 }
             )

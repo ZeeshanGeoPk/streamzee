@@ -6,7 +6,7 @@
 
 **Streamzee** is a clean, cinematic, and unified streaming hub for Android. It brings together Movies, TV Series, and Anime into a single, high-performance interface built entirely with Jetpack Compose.
 
-> **⚠️ Beta Phase Notice:** This application is currently in its early beta. While core streaming functionality is stable, the **Downloads** and **Profile** tabs are currently under development and will be available in future updates.
+> **Beta Phase Notice:** This application is currently in early beta. For provider-supported streams, start playback and use the player Download button to save movies or episodes offline. The **Profile** tab remains under development.
 
 ---
 

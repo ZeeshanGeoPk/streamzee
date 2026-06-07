@@ -3,6 +3,7 @@ package com.streamzee.ui
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Box
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Favorite
@@ -21,6 +22,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.streamzee.data.playerSources
+import com.streamzee.data.DownloadStatus
 import com.streamzee.ui.screens.animeDetailsScreen
 import com.streamzee.ui.screens.animePlayerScreen
 import com.streamzee.ui.screens.detailsScreen
@@ -29,6 +31,7 @@ import com.streamzee.ui.screens.homeBrowseScreen
 import com.streamzee.ui.screens.homeScreen
 import com.streamzee.ui.screens.libraryScreen
 import com.streamzee.ui.screens.playerScreen
+import com.streamzee.ui.screens.offlinePlayerScreen
 import com.streamzee.ui.screens.profileScreen
 import com.streamzee.ui.screens.searchScreen
 import com.streamzee.ui.screens.setupScreen
@@ -59,7 +62,8 @@ fun streamzeeApp(viewModel: MainViewModel) {
     streamzeeTheme(themeMode = uiState.themeMode, accentName = uiState.accentColor) {
         val colors = androidx.compose.material3.MaterialTheme.colorScheme
         Surface(modifier = Modifier.fillMaxSize(), color = colors.background) {
-            Scaffold(
+            Box(modifier = Modifier.fillMaxSize()) {
+                Scaffold(
                 bottomBar = {
                     if (showBottomBar) {
                         NavigationBar(
@@ -226,6 +230,14 @@ fun streamzeeApp(viewModel: MainViewModel) {
                     is Screen.Downloads -> downloadsScreen(
                         uiState = uiState,
                         onBack = goBack,
+                        onPause = viewModel::pauseDownload,
+                        onResume = viewModel::resumeDownload,
+                        onRetry = viewModel::retryDownload,
+                        onRemove = viewModel::removeDownload,
+                        onPauseAll = viewModel::pauseAllDownloads,
+                        onResumeAll = viewModel::resumeAllDownloads,
+                        onSettingsChange = viewModel::updateDownloadSettings,
+                        onPlay = viewModel::playOfflineDownload,
                         modifier = contentModifier,
                     )
                     is Screen.Profile -> profileScreen(
@@ -284,6 +296,26 @@ fun streamzeeApp(viewModel: MainViewModel) {
                                 episode = e
                             ) 
                         },
+                        isDownloadQueued = uiState.downloadsQueue.any {
+                            it.status != DownloadStatus.FAILED &&
+                                it.id == if (screen.tvSeason != null && screen.tvEpisode != null) {
+                                    "tv_${screen.movie.tmdbID}_s${screen.tvSeason}_e${screen.tvEpisode}"
+                                } else {
+                                    "movie_${screen.movie.tmdbID}"
+                                }
+                        },
+                        onDownload = { stream ->
+                            if (screen.tvSeason != null && screen.tvEpisode != null) {
+                                viewModel.queueTvEpisodeDownload(
+                                    movie = screen.movie,
+                                    season = screen.tvSeason,
+                                    episode = screen.tvEpisode,
+                                    stream = stream,
+                                )
+                            } else {
+                                viewModel.queueMovieDownload(screen.movie, stream)
+                            }
+                        },
                         tvSeason = screen.tvSeason,
                         tvEpisode = screen.tvEpisode,
                         modifier = contentModifier,
@@ -324,10 +356,28 @@ fun streamzeeApp(viewModel: MainViewModel) {
                                 positionMs = positionMs,
                             )
                         },
+                        isDownloadQueued = uiState.downloadsQueue.any {
+                            it.status != DownloadStatus.FAILED &&
+                                it.id == "anime_${screen.show.animeID}_e${screen.episode}_${screen.translationType}"
+                        },
+                        onDownload = { stream ->
+                            viewModel.queueAnimeEpisodeDownload(
+                                show = screen.show,
+                                episode = screen.episode,
+                                stream = stream,
+                            )
+                        },
+                        onBack = goBack,
+                        modifier = contentModifier,
+                    )
+                    is Screen.OfflinePlayer -> offlinePlayerScreen(
+                        downloadId = screen.downloadId,
                         onBack = goBack,
                         modifier = contentModifier,
                     )
                 }
+            }
+
             }
         }
     }

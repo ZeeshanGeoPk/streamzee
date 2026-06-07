@@ -1,5 +1,7 @@
 package com.streamzee.ui.screens
 
+import android.annotation.SuppressLint
+import android.os.Build
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -21,6 +23,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -35,7 +39,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.streamzee.data.MegaPlayShow
+import com.streamzee.data.CapturedMediaStream
+import com.streamzee.data.StreamDownloadManager
+import java.util.concurrent.atomic.AtomicBoolean
 
+@SuppressLint("JavascriptInterface")
 @Composable
 fun animePlayerScreen(
     show: MegaPlayShow,
@@ -43,6 +51,8 @@ fun animePlayerScreen(
     streamUrl: String,
     resumePositionMs: Long,
     onPlaybackPositionUpdate: (Long) -> Unit,
+    isDownloadQueued: Boolean,
+    onDownload: (CapturedMediaStream) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -54,6 +64,12 @@ fun animePlayerScreen(
 }
     var isFullScreen by remember { mutableStateOf(false) }
     var hideCustomView by remember { mutableStateOf<(() -> Unit)?>(null) }
+    var capturedStream by remember(show.animeID, episode, streamUrl) {
+        mutableStateOf<CapturedMediaStream?>(null)
+    }
+    val streamCaptureClaimed = remember(show.animeID, episode, streamUrl) {
+        AtomicBoolean(false)
+    }
     val playbackBridge = remember(show.animeID, episode, resumePositionMs) {
         WebViewPlaybackBridge(resumePositionMs) { positionMs ->
             onPlaybackPositionUpdate(positionMs)
@@ -125,8 +141,9 @@ fun animePlayerScreen(
                         mediaPlaybackRequiresUserGesture = false
                         mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                         
-                        @Suppress("DEPRECATION")
-                        safeBrowsingEnabled = false 
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            safeBrowsingEnabled = false
+                        }
 
                         userAgentString = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
                     }
@@ -159,6 +176,18 @@ fun animePlayerScreen(
                             )
                             if (adDomains.any { url.contains(it, ignoreCase = true) }) {
                                 return WebResourceResponse("text/plain", "utf-8", null)
+                            }
+                            if (
+                                StreamDownloadManager.isDownloadableMediaUrl(url) &&
+                                streamCaptureClaimed.compareAndSet(false, true)
+                            ) {
+                                val stream = CapturedMediaStream(
+                                    url = url,
+                                    mimeType = StreamDownloadManager.inferMimeType(url),
+                                    requestHeaders = request?.requestHeaders.orEmpty(),
+                                    pageUrl = streamUrl,
+                                )
+                                view?.post { capturedStream = stream }
                             }
                             return super.shouldInterceptRequest(view, request)
                         }
@@ -336,7 +365,7 @@ fun animePlayerScreen(
             IconButton(
                     onClick = {
                         if (isFullScreen) {
-                            webViewRef.value?.webChromeClient?.onHideCustomView()
+                            hideCustomView?.invoke()
                         } else {
                             activity.requestedOrientation =
                                 android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
@@ -369,6 +398,32 @@ fun animePlayerScreen(
                     fontWeight = FontWeight.SemiBold
                     )
                 }
+
+            Spacer(Modifier.weight(1f))
+
+            IconButton(
+                onClick = {
+                    capturedStream?.let(onDownload)
+                },
+                enabled = capturedStream != null && !isDownloadQueued,
+                modifier = Modifier.background(Color.Black.copy(alpha = 0.5f), CircleShape),
+            ) {
+                Icon(
+                    if (isDownloadQueued) Icons.Default.Check else Icons.Default.Download,
+                    contentDescription = when {
+                        isDownloadQueued -> "Added to downloads"
+                        capturedStream != null -> "Download this episode"
+                        else -> "Start playback to enable download"
+                    },
+                    tint = if (
+                        isDownloadQueued || capturedStream != null
+                    ) {
+                        Color.White
+                    } else {
+                        Color.Gray
+                    },
+                )
+            }
             }
         }
     }

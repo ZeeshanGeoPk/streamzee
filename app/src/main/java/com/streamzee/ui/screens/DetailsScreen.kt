@@ -72,7 +72,7 @@ fun detailsScreen(
                 resumePositionMs = resumePositionMs ?: 0L, // Handle nullability
                 isSaved = isSaved,
                 onToggleSave = onToggleSave,
-                onPlay = onPlay
+                onPlay = onPlay,
             )
         }
 
@@ -95,7 +95,9 @@ fun detailsScreen(
             items(episodes) { episode ->
                 episodeItem(
                     episode = episode,
-                    onClick = { onPlay(movie.tmdbID.toInt(), selectedSeason, episode.episodeNumber, 0L) }
+                    onClick = {
+                        onPlay(movie.tmdbID.toInt(), selectedSeason, episode.episodeNumber, 0L)
+                    },
                 )
             }
         }
@@ -152,7 +154,7 @@ private fun actionButtonsSection(
     lastEpisode: Int?,
     isSaved: Boolean,
     onToggleSave: (String) -> Unit,
-    onPlay: (Int, Int?, Int?, Long) -> Unit
+    onPlay: (Int, Int?, Int?, Long) -> Unit,
 ) {
 
     val hasProgress = if (movie.isTv) {
@@ -233,6 +235,7 @@ private fun actionButtonsSection(
                 color = MaterialTheme.colorScheme.onBackground,
             )
         }
+
     }
 }
 
@@ -286,7 +289,10 @@ private fun seasonSelector(
 }
 
 @Composable
-private fun episodeItem(episode: TmdbEpisode, onClick: () -> Unit) {
+private fun episodeItem(
+    episode: TmdbEpisode,
+    onClick: () -> Unit,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -316,7 +322,7 @@ private fun episodeItem(episode: TmdbEpisode, onClick: () -> Unit) {
             )
             Text("${episode.runtime ?: 45} min", color = TextSec, fontSize = 12.sp)
         }
-        Icon(Icons.Default.FileDownload, null, tint = TextSec)
+        Icon(Icons.Default.PlayArrow, null, tint = TextSec)
     }
 }
 
@@ -342,7 +348,8 @@ private fun recommendationsSection(list: List<TmdbMovie>, onMovieClick: (TmdbMov
                 }
             }
         }
-    } 
+
+    }
 }
 
 private fun formatWatchedTime(positionMs: Long): String {

@@ -6,6 +6,9 @@
    See https://developer.android.com/about/versions/12/backup-restore
 -->
 <full-backup-content>
+    <exclude domain="file" path="offline_media/" />
+    <exclude domain="database" path="exoplayer_internal.db" />
+    <exclude domain="sharedpref" path="streamzee_downloads.xml" />
     <!--
    <include domain="sharedpref" path="."/>
    <exclude domain="sharedpref" path="device.xml"/>
