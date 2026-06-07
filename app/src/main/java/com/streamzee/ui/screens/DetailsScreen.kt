@@ -157,7 +157,7 @@ private fun actionButtonsSection(
 
     val hasProgress = if (movie.isTv) {
         // Show resume if we have watched past S1 E1 OR we have time progress
-        lastSeason != null && (lastSeason > 1 || lastEpisode!! > 1 || resumePositionMs > 1000)
+        (lastSeason ?: 1) > 1 || (lastEpisode ?: 1) > 1 || resumePositionMs > 1000
     } else {
         // For movies, only show if we have time progress
         resumePositionMs > 1000
@@ -186,7 +186,12 @@ private fun actionButtonsSection(
             if (hasProgress) { // Change to hasProgress if you want to conditionally show/hide the Resume button
                 Button(
                     onClick = { 
-                        onPlay(movie.tmdbID.toInt(), lastSeason, lastEpisode, resumePositionMs) 
+                        onPlay(
+                            movie.tmdbID.toInt(),
+                            lastSeason?.takeIf { movie.isTv } ?: if (movie.isTv) 1 else null,
+                            lastEpisode?.takeIf { movie.isTv } ?: if (movie.isTv) 1 else null,
+                            resumePositionMs,
+                        )
                     },
                     modifier = Modifier.weight(1f).height(50.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = CardBg),
@@ -195,7 +200,11 @@ private fun actionButtonsSection(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("Resume", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         Text(
-                            text = if (movie.isTv) "S$lastSeason E$lastEpisode" else formatMillis(resumePositionMs),
+                            text = if (movie.isTv) {
+                                "S${lastSeason ?: 1} E${lastEpisode ?: 1} / ${formatWatchedTime(resumePositionMs)}"
+                            } else {
+                                formatWatchedTime(resumePositionMs)
+                            },
                             fontSize = 10.sp, 
                             color = TextSec
                         )
@@ -336,14 +345,9 @@ private fun recommendationsSection(list: List<TmdbMovie>, onMovieClick: (TmdbMov
     } 
 }
 
-private fun formatMillis(ms: Long): String {
-    val totalSeconds = ms / 1000
-    val hours = totalSeconds / 3600
-    val minutes = (totalSeconds % 3600) / 60
-    val seconds = totalSeconds % 60
-    return if (hours > 0) {
-        String.format("%02d:%02d:%02d", hours, minutes, seconds)
-    } else {
-        String.format("%02d:%02d", minutes, seconds)
-    }
+private fun formatWatchedTime(positionMs: Long): String {
+    val totalMinutes = (positionMs / 60_000L).coerceAtLeast(0L)
+    val hours = totalMinutes / 60
+    val minutes = totalMinutes % 60
+    return if (hours > 0) "${hours}h ${minutes}m" else "${minutes}m"
 }

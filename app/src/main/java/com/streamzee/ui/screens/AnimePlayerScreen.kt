@@ -41,6 +41,8 @@ fun animePlayerScreen(
     show: MegaPlayShow,
     episode: Int,
     streamUrl: String,
+    resumePositionMs: Long,
+    onPlaybackPositionUpdate: (Long) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -52,6 +54,11 @@ fun animePlayerScreen(
 }
     var isFullScreen by remember { mutableStateOf(false) }
     var hideCustomView by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val playbackBridge = remember(show.animeID, episode, resumePositionMs) {
+        WebViewPlaybackBridge(resumePositionMs) { positionMs ->
+            onPlaybackPositionUpdate(positionMs)
+        }
+    }
 
     BackHandler {
         if (isFullScreen) {
@@ -72,9 +79,11 @@ fun animePlayerScreen(
 
     DisposableEffect(Unit) {
         onDispose {
+            playbackBridge.flush()
             webViewRef.value?.apply {
                 stopLoading()
                 loadUrl("about:blank")
+                removeJavascriptInterface(PLAYBACK_JAVASCRIPT_INTERFACE)
                 destroy()
             }
             webViewRef.value = null
@@ -152,6 +161,14 @@ fun animePlayerScreen(
                                 return WebResourceResponse("text/plain", "utf-8", null)
                             }
                             return super.shouldInterceptRequest(view, request)
+                        }
+
+                        override fun onPageFinished(view: WebView?, url: String?) {
+                            super.onPageFinished(view, url)
+                            view?.evaluateJavascript(
+                                playbackTrackingScript(playbackBridge.latestPositionMs()),
+                                null,
+                            )
                         }
                     }
                     
@@ -241,12 +258,10 @@ fun animePlayerScreen(
     }
 }
 
-                    addJavascriptInterface(object {
-                        @android.webkit.JavascriptInterface
-                        fun onTimeUpdate(seconds: Float) {
-                            // Logic for progress tracking goes here
-                        }
-                    }, "Android")
+                    addJavascriptInterface(
+                        playbackBridge,
+                        PLAYBACK_JAVASCRIPT_INTERFACE,
+                    )
 
                     val htmlWrapper = """
                                         <!DOCTYPE html>
@@ -285,6 +300,10 @@ fun animePlayerScreen(
                                             allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
                                             sandbox="allow-scripts allow-same-origin allow-forms allow-presentation">
                                         </iframe>
+
+                                        <script>
+                                        ${playbackTrackingScript(resumePositionMs)}
+                                        </script>
 
                                         </body>
                                         </html>

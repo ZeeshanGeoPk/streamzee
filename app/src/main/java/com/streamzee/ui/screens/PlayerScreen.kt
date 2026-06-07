@@ -123,6 +123,12 @@ fun playerScreen(
     var lastKnownPosition by remember {
         mutableLongStateOf(resumePositionMs ?: 0L)
     }
+    val playbackBridge = remember(movie.tmdbID, tvSeason, tvEpisode, resumePositionMs) {
+        WebViewPlaybackBridge(resumePositionMs ?: 0L) { positionMs ->
+            lastKnownPosition = positionMs
+            onPlaybackPositionUpdate(positionMs, tvSeason, tvEpisode)
+        }
+    }
 
     var currentSourceIndex by remember {
         mutableStateOf(startSourceIndex)
@@ -171,15 +177,24 @@ fun playerScreen(
             }
         }
 
-    val currentUrl =
-        candidateUrls
-            .getOrNull(currentCandidateIndex)
-            .orEmpty()
+    val rawCurrentUrl = candidateUrls
+        .getOrNull(currentCandidateIndex)
+        .orEmpty()
+    val currentUrl = remember(rawCurrentUrl, currentSource.id) {
+        playbackUrlWithResume(
+            url = rawCurrentUrl,
+            sourceId = currentSource.id,
+            resumePositionMs = lastKnownPosition,
+        )
+    }
 
     val webViewRef =
         remember {
             mutableStateOf<WebView?>(null)
         }
+    var loadedUrl by remember {
+        mutableStateOf<String?>(null)
+    }
 
     Box(
         modifier = Modifier
@@ -219,6 +234,11 @@ fun playerScreen(
                         mixedContentMode =
                             WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                     }
+
+                    addJavascriptInterface(
+                        playbackBridge,
+                        PLAYBACK_JAVASCRIPT_INTERFACE,
+                    )
 
                     webChromeClient =
                         object : WebChromeClient() {
@@ -347,15 +367,25 @@ fun playerScreen(
                             ) {
                                 handler?.proceed()
                             }
+
+                            override fun onPageFinished(view: WebView?, url: String?) {
+                                super.onPageFinished(view, url)
+                                view?.evaluateJavascript(
+                                    playbackTrackingScript(playbackBridge.latestPositionMs()),
+                                    null,
+                                )
+                            }
                         }
 
+                    loadedUrl = currentUrl
                     loadUrl(currentUrl)
                 }
             },
 
             update = { webView ->
 
-                if (webView.url != currentUrl) {
+                if (loadedUrl != currentUrl) {
+                    loadedUrl = currentUrl
                     webView.loadUrl(currentUrl)
                 }
             },
@@ -492,15 +522,13 @@ ExposedDropdownMenuBox(
 
             val webView = webViewRef.value
 
-            onPlaybackPositionUpdate(
-                lastKnownPosition,
-                tvSeason,
-                tvEpisode
-            )
+            playbackBridge.flush()
 
             webView?.stopLoading()
 
             webView?.loadUrl("about:blank")
+
+            webView?.removeJavascriptInterface(PLAYBACK_JAVASCRIPT_INTERFACE)
 
             webView?.destroy()
 

@@ -46,8 +46,11 @@ fun animeDetailsScreen(
     onTranslationChange: (String) -> Unit,
     onBack: () -> Unit,
     onPlayEpisode: (Int) -> Unit,
+    onResumeEpisode: (Int, Long) -> Unit,
     onToggleSave: (String) -> Unit,
     isSaved: Boolean,
+    resumePositionMs: Long,
+    lastWatchedEpisode: Int,
     modifier: Modifier = Modifier,
     isLoading: Boolean,
     errorMessage: String?
@@ -71,7 +74,10 @@ fun animeDetailsScreen(
                         episodeCount = episodes.size,
                         onBack = onBack,
                         isSaved = isSaved,
-                        onToggleSave = onToggleSave
+                        onToggleSave = onToggleSave,
+                        resumePositionMs = resumePositionMs,
+                        lastWatchedEpisode = lastWatchedEpisode,
+                        onResumeEpisode = onResumeEpisode,
                     )
                 }
 
@@ -139,7 +145,10 @@ private fun animeHeroSection(
     episodeCount: Int,
     onBack: () -> Unit,
     isSaved: Boolean,
-    onToggleSave: (String) -> Unit
+    onToggleSave: (String) -> Unit,
+    resumePositionMs: Long,
+    lastWatchedEpisode: Int,
+    onResumeEpisode: (Int, Long) -> Unit,
 ) {
     Box(
         modifier = Modifier
@@ -244,6 +253,32 @@ private fun animeHeroSection(
                 )
             }
 
+            if (resumePositionMs > 1_000L || lastWatchedEpisode > 1) {
+                Button(
+                    onClick = {
+                        onResumeEpisode(lastWatchedEpisode, resumePositionMs)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Purple),
+                    shape = RoundedCornerShape(8.dp),
+                ) {
+                    Icon(Icons.Default.PlayArrow, null)
+                    Spacer(Modifier.width(6.dp))
+                    Column(horizontalAlignment = Alignment.Start) {
+                        Text(
+                            "Resume Episode $lastWatchedEpisode",
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Text(
+                            formatAnimeWatchedTime(resumePositionMs),
+                            fontSize = 10.sp,
+                        )
+                    }
+                }
+            }
+
             OutlinedButton(
                 onClick = { onToggleSave("anime_${show.animeID}") },
                 modifier = Modifier
@@ -279,6 +314,13 @@ private fun animeHeroSection(
             }
         }
     }
+}
+
+private fun formatAnimeWatchedTime(positionMs: Long): String {
+    val totalMinutes = (positionMs / 60_000L).coerceAtLeast(0L)
+    val hours = totalMinutes / 60
+    val minutes = totalMinutes % 60
+    return if (hours > 0) "${hours}h ${minutes}m" else "${minutes}m"
 }
 
 @Composable

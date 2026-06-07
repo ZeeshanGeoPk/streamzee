@@ -575,7 +575,7 @@ private fun continueWatchingCard(item: ContinueWatchingItem, onClick: () -> Unit
         (it.backdropPath ?: it.posterPath)?.let { path -> TMDB_IMAGE_W500 + path }
     } ?: anime?.thumbnail
     val subtitle = when {
-        anime != null -> "Episode ${item.episode ?: 1}"
+        anime != null -> "Episode ${item.episode ?: 1} / ${formatResumeTime(item.positionMs)} watched"
         movie?.isTv == true && item.season != null && item.episode != null ->
             "S${item.season} E${item.episode} / ${formatResumeTime(item.positionMs)} watched"
         else -> "${formatResumeTime(item.positionMs)} watched"
@@ -650,7 +650,7 @@ private fun continueWatchingCard(item: ContinueWatchingItem, onClick: () -> Unit
 }
 
 private fun formatResumeTime(positionMs: Long): String {
-    val totalMinutes = (positionMs / 60000L).coerceAtLeast(1L)
+    val totalMinutes = (positionMs / 60_000L).coerceAtLeast(0L)
     val hours = totalMinutes / 60
     val minutes = totalMinutes % 60
     return if (hours > 0) "${hours}h ${minutes}m" else "${minutes}m"

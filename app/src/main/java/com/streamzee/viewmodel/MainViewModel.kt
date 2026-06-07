@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.async
@@ -64,6 +65,7 @@ sealed interface Screen {
         val episode: Int,
         val streamUrl: String, // The resolved direct link
         val translationType: String = "sub",
+        val resumePositionMs: Long = 0L,
     ) : Screen
     object Setup : Screen
 }
@@ -131,6 +133,8 @@ data class MainUiState(
     val isLoadingSaved: Boolean = false,
     val isRefreshingLibrary: Boolean = false,
     val currentMovieWatchProgressMs: Long? = null,
+    val currentAnimeWatchProgressMs: Long? = null,
+    val lastWatchedAnimeEpisode: Int? = null,
     val subtitleSearchResults: List<com.streamzee.data.SubtitleItem> = emptyList(),
     val isSearchingSubtitles: Boolean = false,
     val subtitleErrorMessage: String? = null,
@@ -191,6 +195,8 @@ private data class HomeContent(
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = StreamzeeRepository(NetworkClient.tmdbApi, application)
     private var continueWatchingJob: Job? = null
+    private var movieWatchProgressJob: Job? = null
+    private var animeWatchProgressJob: Job? = null
 
     private val _uiState = MutableStateFlow(MainUiState())
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
@@ -212,6 +218,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 backStack = nextBackStack,
                 errorMessage = null,
                 currentMovieWatchProgressMs = null,
+                currentAnimeWatchProgressMs = null,
             )
         }
     }
@@ -239,6 +246,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 loadSeason(previous.movie.tmdbID, _uiState.value.lastWatchedSeason ?: 1)
             }
             loadWatchProgress(previous.movie.tmdbID.toString())
+        }
+
+        if (previous is Screen.AnimeDetails) {
+            loadAnimeWatchProgress(previous.show.animeID)
+        }
+
+        if (previous is Screen.Home) {
+            refreshContinueWatchingFromHistory()
         }
 
         return true
@@ -281,7 +296,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         viewModelScope.launch {
-            repository.watchHistoryIdsFlow().collectLatest { historyIds ->
+            repository.watchHistoryIdsFlow().distinctUntilChanged().collectLatest { historyIds ->
                 loadContinueWatching(_uiState.value.apiKey, historyIds)
             }
         }
@@ -490,6 +505,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun openHome(addToBackStack: Boolean = true) {
         navigateTo(Screen.Home, addToBackStack)
+        refreshContinueWatchingFromHistory()
+    }
+
+    private fun refreshContinueWatchingFromHistory() {
+        viewModelScope.launch {
+            loadContinueWatching(
+                _uiState.value.apiKey,
+                repository.watchHistoryIdsFlow().first(),
+            )
+        }
     }
 
     fun openHomeBrowse(section: HomeSection) {
@@ -651,7 +676,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
                         return@mapNotNull ContinueWatchingItem(
                             anime = anime,
-                            progress = 0.08f,
+                            progress = estimateAnimeWatchProgress(positionMs),
                             positionMs = positionMs,
                             episode = episode,
                         )
@@ -693,11 +718,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             ).firstOrNull { it.animeID == animeId }
     }
 
-    private fun addAnimeToContinueWatching(show: MegaPlayShow, episodeNumber: Int) {
+    private fun addAnimeToContinueWatching(
+        show: MegaPlayShow,
+        episodeNumber: Int,
+        positionMs: Long,
+    ) {
         val item = ContinueWatchingItem(
             anime = show,
-            progress = 0.08f,
-            positionMs = 0L,
+            progress = estimateAnimeWatchProgress(positionMs),
+            positionMs = positionMs,
             episode = episodeNumber,
         )
 
@@ -712,6 +741,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun estimateWatchProgress(positionMs: Long, isTv: Boolean): Float {
         val estimatedDurationMs = if (isTv) 45 * 60 * 1000L else 120 * 60 * 1000L
+        if (positionMs <= 0L) return 0.08f
+        return (positionMs.toFloat() / estimatedDurationMs).coerceIn(0.08f, 0.95f)
+    }
+
+    private fun estimateAnimeWatchProgress(positionMs: Long): Float {
+        val estimatedDurationMs = 24 * 60 * 1000L
         if (positionMs <= 0L) return 0.08f
         return (positionMs.toFloat() / estimatedDurationMs).coerceIn(0.08f, 0.95f)
     }
@@ -871,6 +906,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         currentScreen = Screen.Details(fullMovie),
                         backStack = nextBackStack,
                         currentSeasonEpisodes = emptyList(),
+                        currentMovieWatchProgressMs = null,
+                        lastWatchedSeason = 1,
+                        lastWatchedEpisode = 1,
                         isLoading = false,
                     )
                 }
@@ -893,23 +931,42 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         navigateTo(Screen.AnimeDetails(show))
         _uiState.update { state ->
-            state.copy(animeEpisodes = generatedEpisodes, isLoading = false, errorMessage = null)
+            state.copy(
+                animeEpisodes = generatedEpisodes,
+                currentAnimeWatchProgressMs = null,
+                lastWatchedAnimeEpisode = 1,
+                isLoading = false,
+                errorMessage = null,
+            )
         }
+        loadAnimeWatchProgress(show.animeID)
     }
 
-    fun playAnime(show: MegaPlayShow, episodeNumber: Int) {
+    fun playAnime(
+        show: MegaPlayShow,
+        episodeNumber: Int,
+        resumePositionMs: Long = 0L,
+    ) {
         val language = _uiState.value.selectedTranslationType // "sub" or "dub"
         
         // MEGA-PLAY MAL ENDPOINT: /stream/mal/{mal-id}/{ep-num}/{language}
         // show.animeMalID is the MAL ID we got from Jikan
         val megaPlayUrl = "https://megaplay.buzz/stream/mal/${show.animeMalID}/$episodeNumber/$language"
 
-        addAnimeToContinueWatching(show, episodeNumber)
+        addAnimeToContinueWatching(show, episodeNumber, resumePositionMs)
         viewModelScope.launch {
-            repository.saveAnimeWatchProgress(show.animeID, episodeNumber)
+            repository.saveAnimeWatchProgress(show.animeID, episodeNumber, resumePositionMs)
         }
 
-        navigateTo(Screen.AnimePlayer(show, episodeNumber, megaPlayUrl))
+        navigateTo(
+            Screen.AnimePlayer(
+                show = show,
+                episode = episodeNumber,
+                streamUrl = megaPlayUrl,
+                translationType = language,
+                resumePositionMs = resumePositionMs,
+            )
+        )
     }
     
     
@@ -1078,7 +1135,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }    
     
     private fun loadWatchProgress(movieId: String) {
-        viewModelScope.launch {
+        movieWatchProgressJob?.cancel()
+        movieWatchProgressJob = viewModelScope.launch {
             // Collect the Triple (Position, Season, Episode)
             repository.watchProgressFlow(movieId).collectLatest { (pos, season, episode) ->
                 _uiState.update { state ->
@@ -1092,10 +1150,30 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private fun loadAnimeWatchProgress(animeId: String) {
+        animeWatchProgressJob?.cancel()
+        animeWatchProgressJob = viewModelScope.launch {
+            repository.watchProgressFlow("anime_$animeId").collectLatest { (pos, _, episode) ->
+                _uiState.update { state ->
+                    state.copy(
+                        currentAnimeWatchProgressMs = pos,
+                        lastWatchedAnimeEpisode = episode,
+                    )
+                }
+            }
+        }
+    }
+
     // This is called from the PlayerScreen when the user leaves
     fun savePlaybackProgress(movieId: String, positionMs: Long, season: Int? = null, episode: Int? = null) {
         viewModelScope.launch {
             repository.saveWatchProgress(movieId, positionMs, season, episode)
+        }
+    }
+
+    fun saveAnimePlaybackProgress(animeId: String, episode: Int, positionMs: Long) {
+        viewModelScope.launch {
+            repository.saveAnimeWatchProgress(animeId, episode, positionMs)
         }
     }
 

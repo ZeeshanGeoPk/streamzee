@@ -272,7 +272,7 @@ fun streamzeeApp(viewModel: MainViewModel) {
                     is Screen.Player -> playerScreen(
                         movie = screen.movie,
                         source = screen.source,
-                        resumePositionMs = uiState.currentMovieWatchProgressMs,
+                        resumePositionMs = screen.resumePositionMs,
                         onBack = goBack,
                         onPlaybackPositionUpdate = { pos, s, e -> 
                             // If the movie is a TV show, we ALWAYS save the season/episode 
@@ -300,7 +300,14 @@ fun streamzeeApp(viewModel: MainViewModel) {
                         onBack = goBack,
                         onToggleSave = { viewModel.toggleSaved(it) },
                         isSaved = uiState.savedIds.contains(animeKey),
-                        onPlayEpisode = { epNum -> viewModel.playAnime(screen.show, epNum) },
+                        resumePositionMs = uiState.currentAnimeWatchProgressMs ?: 0L,
+                        lastWatchedEpisode = uiState.lastWatchedAnimeEpisode ?: 1,
+                        onPlayEpisode = { epNum ->
+                            viewModel.playAnime(screen.show, epNum, resumePositionMs = 0L)
+                        },
+                        onResumeEpisode = { epNum, positionMs ->
+                            viewModel.playAnime(screen.show, epNum, positionMs)
+                        },
                         modifier = contentModifier
                     )
                         }
@@ -309,6 +316,14 @@ fun streamzeeApp(viewModel: MainViewModel) {
                         show = screen.show,
                         episode = screen.episode,
                         streamUrl = screen.streamUrl, // Add this
+                        resumePositionMs = screen.resumePositionMs,
+                        onPlaybackPositionUpdate = { positionMs ->
+                            viewModel.saveAnimePlaybackProgress(
+                                animeId = screen.show.animeID,
+                                episode = screen.episode,
+                                positionMs = positionMs,
+                            )
+                        },
                         onBack = goBack,
                         modifier = contentModifier,
                     )
