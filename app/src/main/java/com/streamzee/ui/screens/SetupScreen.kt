@@ -23,7 +23,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -37,8 +36,6 @@ fun setupScreen(
     modifier: Modifier = Modifier,
 ) {
     val tokenState = remember { mutableStateOf("") }
-    val purple = Color(0xFFA855F7)
-
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -50,13 +47,13 @@ fun setupScreen(
             text = "Streamzee Setup",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
-            color = Color.White
+            color = MaterialTheme.colorScheme.onBackground,
         )
         Spacer(modifier = Modifier.height(12.dp))
         Text(
             text = "Enter your TMDB Read Access Token to start browsing movies.",
             style = MaterialTheme.typography.bodyLarge,
-            color = Color(0xFF8E8E9F),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(32.dp))
@@ -89,12 +86,15 @@ fun setupScreen(
                 .fillMaxWidth()
                 .height(56.dp),
             shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = purple)
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+            )
         ) {
             if (isLoading) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(24.dp),
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onPrimary,
                     strokeWidth = 2.dp
                 )
                 Spacer(modifier = Modifier.width(12.dp))

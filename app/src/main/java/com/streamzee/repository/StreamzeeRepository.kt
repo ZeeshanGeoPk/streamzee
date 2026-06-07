@@ -33,8 +33,32 @@ class StreamzeeRepository(
 
     fun watchHistoryIdsFlow(): Flow<List<String>> = AppDataStore.watchHistoryIdsFlow(context)
 
+    fun appPreferencesFlow() = AppDataStore.appPreferencesFlow(context)
+
     suspend fun saveApiKey(apiKey: String) {
         AppDataStore.saveApiKey(context, apiKey)
+    }
+
+    suspend fun saveThemeMode(mode: String) = AppDataStore.saveThemeMode(context, mode)
+
+    suspend fun saveAccentColor(color: String) = AppDataStore.saveAccentColor(context, color)
+
+    suspend fun savePlaybackQuality(quality: String) =
+        AppDataStore.savePlaybackQuality(context, quality)
+
+    suspend fun saveLanguage(language: String) = AppDataStore.saveLanguage(context, language)
+
+    suspend fun saveSubtitlesEnabled(enabled: Boolean) =
+        AppDataStore.saveSubtitlesEnabled(context, enabled)
+
+    suspend fun saveNotificationsEnabled(enabled: Boolean) =
+        AppDataStore.saveNotificationsEnabled(context, enabled)
+
+    suspend fun saveReducedMotion(enabled: Boolean) =
+        AppDataStore.saveReducedMotion(context, enabled)
+
+    suspend fun clearCache(): Boolean = withContext(Dispatchers.IO) {
+        context.cacheDir.listFiles()?.all { it.deleteRecursively() } ?: true
     }
 
     suspend fun toggleSaved(id: String) {

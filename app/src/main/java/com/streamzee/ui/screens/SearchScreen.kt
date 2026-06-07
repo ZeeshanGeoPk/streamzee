@@ -31,10 +31,14 @@ import com.streamzee.data.MegaPlayShow
 import com.streamzee.viewmodel.SearchMode
 
 private const val TMDB_IMAGE_W500 = "https://image.tmdb.org/t/p/w500"
-private val Purple = Color(0xFFA855F7)
-private val CardBg = Color(0xFF161622)
-private val TextSec = Color(0xFF8E8E9F)
-private val ScreenBg = Color(0xFF050508)
+private val Purple: Color
+    @Composable get() = MaterialTheme.colorScheme.primary
+private val CardBg: Color
+    @Composable get() = MaterialTheme.colorScheme.surface
+private val TextSec: Color
+    @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
+private val ScreenBg: Color
+    @Composable get() = MaterialTheme.colorScheme.background
 
 @Composable
 fun searchScreen(
@@ -67,12 +71,12 @@ fun searchScreen(
         ) {
             Text(
                 "Explore",
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onBackground,
                 fontSize = 26.sp,
                 fontWeight = FontWeight.ExtraBold
             )
             IconButton(onClick = onBack) {
-                Icon(Icons.Default.Close, "Close", tint = Color.White)
+                Icon(Icons.Default.Close, "Close", tint = MaterialTheme.colorScheme.onBackground)
             }
         }
 
@@ -83,7 +87,7 @@ fun searchScreen(
             placeholder = {
                 Text(
                     "Search movies, TV, anime...",
-                    color = Color(0xFF5A5A6E),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 15.sp
                 )
             },
@@ -96,8 +100,8 @@ fun searchScreen(
                 unfocusedContainerColor = CardBg,
                 focusedIndicatorColor = Color.Transparent,
                 unfocusedIndicatorColor = Color.Transparent,
-                focusedTextColor = Color.White,
-                unfocusedTextColor = Color.White,
+                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
                 cursorColor = Purple
             ),
             leadingIcon = {
@@ -129,7 +133,7 @@ fun searchScreen(
                         .clip(RoundedCornerShape(20.dp))
                         .background(
                             if (isSelected)
-                                Brush.horizontalGradient(listOf(Purple, Color(0xFF6366F1)))
+                                Brush.horizontalGradient(listOf(Purple, Purple))
                             else
                                 Brush.horizontalGradient(listOf(CardBg, CardBg))
                         )
@@ -142,7 +146,7 @@ fun searchScreen(
                             SearchMode.TV -> "📺 TV Shows"
                             SearchMode.ANIME -> "🎌 Anime"
                         },
-                        color = if (isSelected) Color.White else TextSec,
+                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else TextSec,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                         fontSize = 14.sp
                     )
@@ -173,7 +177,7 @@ fun searchScreen(
         if (errorMessage != null) {
             Text(
                 errorMessage,
-                color = Color(0xFFEF4444),
+                color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                 fontSize = 14.sp
             )
@@ -240,7 +244,7 @@ private fun emptyStateMessage(message: String) {
         Icon(
             Icons.Default.Search,
             contentDescription = null,
-            tint = Color(0xFF2C2C3E),
+            tint = MaterialTheme.colorScheme.surfaceVariant,
             modifier = Modifier.size(64.dp)
         )
         Spacer(Modifier.height(16.dp))
@@ -269,7 +273,7 @@ private fun animeResultCardPremium(show: MegaPlayShow, onClick: () -> Unit) {
             modifier = Modifier
                 .size(width = 70.dp, height = 100.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .background(Color(0xFF2C2C3E)),
+                .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center
         ) {
             if (!show.thumbnail.isNullOrBlank()) {
@@ -295,7 +299,7 @@ private fun animeResultCardPremium(show: MegaPlayShow, onClick: () -> Unit) {
         ) {
             Text(
                 show.name,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
                 maxLines = 2,
@@ -344,7 +348,7 @@ private fun searchResultCardPremium(movie: TmdbMovie, onClick: () -> Unit) {
             modifier = Modifier
                 .size(width = 70.dp, height = 100.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .background(Color(0xFF2C2C3E))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
             if (!movie.posterPath.isNullOrBlank()) {
                 AsyncImage(
@@ -362,7 +366,7 @@ private fun searchResultCardPremium(movie: TmdbMovie, onClick: () -> Unit) {
         ) {
             Text(
                 movie.displayTitle,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
                 maxLines = 2,
@@ -387,7 +391,7 @@ private fun searchResultCardPremium(movie: TmdbMovie, onClick: () -> Unit) {
                     Icon(Icons.Default.Star, null, tint = Color(0xFFFBBF24), modifier = Modifier.size(12.dp))
                     Text(
                         movie.voteAverage?.let { String.format("%.1f", it) } ?: "N/A",
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 12.sp
                     )
                 }

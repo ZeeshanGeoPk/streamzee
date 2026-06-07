@@ -1,6 +1,5 @@
 package com.streamzee.ui.screens
 
-import com.streamzee.ui.screens.comingSoonOverlay
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -60,7 +59,7 @@ Box(modifier = modifier.fillMaxSize()) {
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFF050508))
+            .background(MaterialTheme.colorScheme.background)
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -74,13 +73,13 @@ Box(modifier = modifier.fillMaxSize()) {
                 text = "Downloads",
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.White
+                color = MaterialTheme.colorScheme.onBackground
             )
             IconButton(onClick = { cachedClearedSuccess = true }) {
                 Icon(
                     imageVector = Icons.Default.Settings,
                     contentDescription = "Controls",
-                    tint = Color(0xFFA855F7)
+                    tint = MaterialTheme.colorScheme.primary
                 )
             }
         }
@@ -88,7 +87,7 @@ Box(modifier = modifier.fillMaxSize()) {
         if (cachedClearedSuccess) {
             Text(
                 text = "Cache cleared successfully!",
-                color = Color(0xFFA855F7),
+                color = MaterialTheme.colorScheme.primary,
                 fontSize = 14.sp
             )
             LaunchedEffect(Unit) {
@@ -107,13 +106,23 @@ Box(modifier = modifier.fillMaxSize()) {
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
-                        .background(if (isSelected) Color(0xFFA855F7) else Color(0xFF161622))
+                        .background(
+                            if (isSelected) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.surface
+                            }
+                        )
                         .clickable { selectedTab = tab }
                         .padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
                     Text(
                         text = tab,
-                        color = if (isSelected) Color.White else Color(0xFF8E8E9F),
+                        color = if (isSelected) {
+                            MaterialTheme.colorScheme.onPrimary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 14.sp
                     )
@@ -130,7 +139,7 @@ Box(modifier = modifier.fillMaxSize()) {
         ) {
             if (downloading.isNotEmpty()) {
                 item {
-                    Text("Downloading (${downloading.size})", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("Downloading (${downloading.size})", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
                 items(downloading) { item ->
                     downloadCard(item)
@@ -139,7 +148,7 @@ Box(modifier = modifier.fillMaxSize()) {
 
             if (paused.isNotEmpty()) {
                 item {
-                    Text("Paused (${paused.size})", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("Paused (${paused.size})", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
                 items(paused) { item ->
                     downloadCard(item)
@@ -148,7 +157,7 @@ Box(modifier = modifier.fillMaxSize()) {
 
             if (completed.isNotEmpty()) {
                 item {
-                    Text("Completed (${completed.size})", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("Completed (${completed.size})", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
                 items(completed) { item ->
                     downloadCard(item)
@@ -157,7 +166,7 @@ Box(modifier = modifier.fillMaxSize()) {
 
             if (failed.isNotEmpty()) {
                 item {
-                    Text("Failed (${failed.size})", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("Failed (${failed.size})", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
                 items(failed) { item ->
                     downloadCard(item)
@@ -169,7 +178,7 @@ Box(modifier = modifier.fillMaxSize()) {
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF161622))
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
@@ -179,10 +188,14 @@ Box(modifier = modifier.fillMaxSize()) {
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("Storage Used", color = Color(0xFF8E8E9F), fontSize = 14.sp)
+                    Text(
+                        "Storage Used",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 14.sp,
+                    )
                     Text(
                         "${uiState.storageUsedGb} GB / ${uiState.storageTotalGb} GB",
-                        color = Color(0xFFA855F7),
+                        color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp
                     )
@@ -193,10 +206,9 @@ Box(modifier = modifier.fillMaxSize()) {
                         .fillMaxWidth()
                         .height(8.dp)
                         .clip(RoundedCornerShape(4.dp)),
-                    color = Color(0xFFA855F7),
-                    trackColor = Color(0xFF2C2C3E)
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
                 )
-            comingSoonOverlay("Offline Downloads")
             }
         }
     }
@@ -208,7 +220,7 @@ private fun downloadCard(item: DownloadItem) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFF161622))
+            .background(MaterialTheme.colorScheme.surface)
             .padding(12.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -230,21 +242,21 @@ private fun downloadCard(item: DownloadItem) {
         ) {
             Text(
                 text = item.title,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1
             )
             Text(
                 text = item.subtitle,
-                color = Color(0xFF8E8E9F),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 12.sp
             )
             val sizeMb = item.sizeBytes / (1024 * 1024)
             val dlMb = item.downloadedBytes / (1024 * 1024)
             Text(
                 text = if (item.status == "Downloading") "$dlMb MB / $sizeMb MB" else "$sizeMb MB",
-                color = Color(0xFF8E8E9F),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 12.sp
             )
         }
@@ -259,13 +271,13 @@ private fun downloadCard(item: DownloadItem) {
                     val progressRatio = item.downloadedBytes.toFloat() / item.sizeBytes.toFloat()
                     CircularProgressIndicator(
                         progress = { progressRatio },
-                        color = Color(0xFFA855F7),
+                        color = MaterialTheme.colorScheme.primary,
                         strokeWidth = 3.dp,
                         modifier = Modifier.fillMaxSize()
                     )
                     Text(
                         "${(progressRatio * 100).toInt()}%",
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -274,13 +286,13 @@ private fun downloadCard(item: DownloadItem) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(Color(0xFF2C2C3E), CircleShape),
+                            .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.PlayArrow,
                             contentDescription = "Paused",
-                            tint = Color.White,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(24.dp)
                         )
                     }
@@ -289,13 +301,13 @@ private fun downloadCard(item: DownloadItem) {
                     Box(
                         modifier = Modifier
                             .size(32.dp)
-                            .background(Color(0xFF1E3A24), CircleShape),
+                            .background(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.16f), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Check,
                             contentDescription = "Completed",
-                            tint = Color(0xFF4ADE80),
+                            tint = MaterialTheme.colorScheme.tertiary,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -304,13 +316,13 @@ private fun downloadCard(item: DownloadItem) {
                     Box(
                         modifier = Modifier
                             .size(32.dp)
-                            .background(Color(0xFF451A1A), CircleShape),
+                            .background(MaterialTheme.colorScheme.error.copy(alpha = 0.16f), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Warning,
                             contentDescription = "Failed",
-                            tint = Color(0xFFEF4444),
+                            tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier.size(18.dp)
                         )
                     }

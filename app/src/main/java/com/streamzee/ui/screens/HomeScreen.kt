@@ -39,10 +39,14 @@ import kotlin.time.Duration.Companion.seconds
 
 private const val TMDB_IMAGE_W500 = "https://image.tmdb.org/t/p/w500"
 private const val TMDB_IMAGE_W780 = "https://image.tmdb.org/t/p/w780"
-private val Purple = Color(0xFFA855F7)
-private val CardBg = Color(0xFF161622)
-private val TextSecondary = Color(0xFF8E8E9F)
-private val ScreenBg = Color(0xFF050508)
+private val Purple: Color
+    @Composable get() = MaterialTheme.colorScheme.primary
+private val CardBg: Color
+    @Composable get() = MaterialTheme.colorScheme.surface
+private val TextSecondary: Color
+    @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
+private val ScreenBg: Color
+    @Composable get() = MaterialTheme.colorScheme.background
 
 private sealed interface HomeHeroItem {
     val key: String
@@ -103,6 +107,7 @@ fun homeScreen(
     onToggleSave: (String) -> Unit,
     isLoading: Boolean,
     isRefreshing: Boolean,
+    reducedMotion: Boolean,
     onRefresh: () -> Unit,
     errorMessage: String?,
     modifier: Modifier = Modifier,
@@ -146,16 +151,24 @@ fun homeScreen(
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     IconButton(onClick = onSearchClicked) {
-                        Icon(Icons.Default.Search, "Search", tint = Color.White)
+                        Icon(
+                            Icons.Default.Search,
+                            "Search",
+                            tint = MaterialTheme.colorScheme.onBackground,
+                        )
                     }
                     IconButton(onClick = {}) {
-                        Icon(Icons.Default.Notifications, "Notifications", tint = Color.White)
+                        Icon(
+                            Icons.Default.Notifications,
+                            "Notifications",
+                            tint = MaterialTheme.colorScheme.onBackground,
+                        )
                     }
                     Box(
                         modifier = Modifier
                             .size(36.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFF2C2C3E))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
                             .clickable { onLibraryClicked() },
                         contentAlignment = Alignment.Center
                     ) {
@@ -176,11 +189,13 @@ fun homeScreen(
                 val pagerState = rememberPagerState(pageCount = { heroItems.size })
 
                 // Auto-scroll
-                LaunchedEffect(pagerState) {
-                    while (true) {
-                        delay(4.seconds)
-                        val next = (pagerState.currentPage + 1) % heroItems.size
-                        pagerState.animateScrollToPage(next)
+                LaunchedEffect(pagerState, reducedMotion) {
+                    if (!reducedMotion) {
+                        while (true) {
+                            delay(4.seconds)
+                            val next = (pagerState.currentPage + 1) % heroItems.size
+                            pagerState.animateScrollToPage(next)
+                        }
                     }
                 }
 
@@ -328,7 +343,11 @@ fun homeScreen(
                                     .size(if (pagerState.currentPage == index) 8.dp else 6.dp)
                                     .clip(CircleShape)
                                     .background(
-                                        if (pagerState.currentPage == index) Purple else Color(0xFF5A5A6E)
+                                        if (pagerState.currentPage == index) {
+                                            Purple
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                        }
                                     )
                             )
                         }
@@ -342,7 +361,7 @@ fun homeScreen(
             item {
                 Text(
                     text = errorMessage,
-                    color = Color(0xFFEF4444),
+                    color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     fontSize = 14.sp
                 )
@@ -525,7 +544,12 @@ private fun sectionHeader(title: String, action: String? = "See all", onActionCl
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(title, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Text(
+            title,
+            color = MaterialTheme.colorScheme.onBackground,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+        )
         if (action != null && onActionClick != null) {
             Text(
                 action,
@@ -604,12 +628,12 @@ private fun continueWatchingCard(item: ContinueWatchingItem, onClick: () -> Unit
                 .height(3.dp)
                 .clip(RoundedCornerShape(2.dp)),
             color = Purple,
-            trackColor = Color(0xFF2C2C3E)
+            trackColor = MaterialTheme.colorScheme.surfaceVariant,
         )
         Spacer(Modifier.height(6.dp))
         Text(
             title,
-            color = Color.White,
+            color = MaterialTheme.colorScheme.onBackground,
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
             maxLines = 1,
@@ -656,7 +680,7 @@ private fun posterCard(movie: TmdbMovie, onClick: () -> Unit) {
         Spacer(Modifier.height(8.dp))
         Text(
             movie.displayTitle,
-            color = Color.White,
+            color = MaterialTheme.colorScheme.onBackground,
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
             maxLines = 1,
@@ -689,7 +713,7 @@ private fun animePosterCard(show: MegaPlayShow, onClick: () -> Unit, showScore: 
                 .fillMaxWidth()
                 .height(190.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(Color(0xFF2C2C3E)),
+                .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center
         ) {
             if (!show.thumbnail.isNullOrBlank()) {
@@ -734,7 +758,7 @@ private fun animePosterCard(show: MegaPlayShow, onClick: () -> Unit, showScore: 
         Spacer(Modifier.height(8.dp))
         Text(
             show.name,
-            color = Color.White,
+            color = MaterialTheme.colorScheme.onBackground,
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
             maxLines = 1,
@@ -796,7 +820,7 @@ private fun topRatedCard(movie: TmdbMovie, onClick: () -> Unit) {
         Spacer(Modifier.height(8.dp))
         Text(
             movie.displayTitle,
-            color = Color.White,
+            color = MaterialTheme.colorScheme.onBackground,
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
             maxLines = 1,

@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -44,7 +45,7 @@ fun animePlayerScreen(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    val purple = Color(0xFFA855F7)
+    val purple = MaterialTheme.colorScheme.primary
     val webViewRef = remember { mutableStateOf<WebView?>(null) }
     val activity = remember(context) {
     context as android.app.Activity

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.MutablePreferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
@@ -13,10 +14,27 @@ import kotlinx.coroutines.flow.map
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "streamzee_prefs")
 
+data class AppPreferences(
+    val themeMode: String = "System",
+    val accentColor: String = "Purple",
+    val playbackQuality: String = "Auto (Best)",
+    val language: String = "English",
+    val subtitlesEnabled: Boolean = true,
+    val notificationsEnabled: Boolean = true,
+    val reducedMotion: Boolean = false,
+)
+
 object AppDataStore {
     private val TMDB_API_KEY = stringPreferencesKey("tmdb_api_key")
     private val SAVED_IDS = stringSetPreferencesKey("saved_media_ids")
     private val WATCH_HISTORY_IDS = stringPreferencesKey("watch_history_ids")
+    private val THEME_MODE = stringPreferencesKey("theme_mode")
+    private val ACCENT_COLOR = stringPreferencesKey("accent_color")
+    private val PLAYBACK_QUALITY = stringPreferencesKey("playback_quality")
+    private val LANGUAGE = stringPreferencesKey("language")
+    private val SUBTITLES_ENABLED = booleanPreferencesKey("subtitles_enabled")
+    private val NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
+    private val REDUCED_MOTION = booleanPreferencesKey("reduced_motion")
 
     private fun watchProgressKey(movieId: String) = stringPreferencesKey("watch_progress_$movieId")
     private fun lastSeasonKey(movieId: String) = stringPreferencesKey("last_season_$movieId")
@@ -85,6 +103,47 @@ object AppDataStore {
         context.dataStore.edit { preferences: MutablePreferences ->
             preferences[TMDB_API_KEY] = value.trim()
         }
+    }
+
+    fun appPreferencesFlow(context: Context): Flow<AppPreferences> =
+        context.dataStore.data.map { preferences ->
+            AppPreferences(
+                themeMode = preferences[THEME_MODE] ?: "System",
+                accentColor = preferences[ACCENT_COLOR] ?: "Purple",
+                playbackQuality = preferences[PLAYBACK_QUALITY] ?: "Auto (Best)",
+                language = preferences[LANGUAGE] ?: "English",
+                subtitlesEnabled = preferences[SUBTITLES_ENABLED] ?: true,
+                notificationsEnabled = preferences[NOTIFICATIONS_ENABLED] ?: true,
+                reducedMotion = preferences[REDUCED_MOTION] ?: false,
+            )
+        }
+
+    suspend fun saveThemeMode(context: Context, value: String) {
+        context.dataStore.edit { it[THEME_MODE] = value }
+    }
+
+    suspend fun saveAccentColor(context: Context, value: String) {
+        context.dataStore.edit { it[ACCENT_COLOR] = value }
+    }
+
+    suspend fun savePlaybackQuality(context: Context, value: String) {
+        context.dataStore.edit { it[PLAYBACK_QUALITY] = value }
+    }
+
+    suspend fun saveLanguage(context: Context, value: String) {
+        context.dataStore.edit { it[LANGUAGE] = value }
+    }
+
+    suspend fun saveSubtitlesEnabled(context: Context, value: Boolean) {
+        context.dataStore.edit { it[SUBTITLES_ENABLED] = value }
+    }
+
+    suspend fun saveNotificationsEnabled(context: Context, value: Boolean) {
+        context.dataStore.edit { it[NOTIFICATIONS_ENABLED] = value }
+    }
+
+    suspend fun saveReducedMotion(context: Context, value: Boolean) {
+        context.dataStore.edit { it[REDUCED_MOTION] = value }
     }
 
     fun savedIdsFlow(context: Context): Flow<Set<String>> =

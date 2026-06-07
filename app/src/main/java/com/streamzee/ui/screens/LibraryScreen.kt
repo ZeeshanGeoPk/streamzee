@@ -28,10 +28,14 @@ import com.streamzee.data.TmdbMovie
 import com.streamzee.data.JikanAnime
 
 private const val TMDB_IMAGE_W500 = "https://image.tmdb.org/t/p/w500"
-private val Purple = Color(0xFFA855F7)
-private val CardBg = Color(0xFF161622)
-private val TextSec = Color(0xFF8E8E9F)
-private val ScreenBg = Color(0xFF050508)
+private val Purple: Color
+    @Composable get() = MaterialTheme.colorScheme.primary
+private val CardBg: Color
+    @Composable get() = MaterialTheme.colorScheme.surface
+private val TextSec: Color
+    @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
+private val ScreenBg: Color
+    @Composable get() = MaterialTheme.colorScheme.background
 
 sealed class WatchlistItem {
     data class Movie(val data: TmdbMovie) : WatchlistItem()
@@ -75,7 +79,7 @@ fun libraryScreen(
         ) {
             Text(
                 "Watchlist",
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onBackground,
                 fontSize = 26.sp,
                 fontWeight = FontWeight.ExtraBold
             )
@@ -134,7 +138,7 @@ fun libraryScreen(
                 ) {
                     Text(
                         filter,
-                        color = if (isSelected) Color.White else TextSec,
+                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else TextSec,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                         fontSize = 14.sp
                     )
@@ -148,7 +152,7 @@ fun libraryScreen(
         if (errorMessage != null) {
             Text(
                 errorMessage,
-                color = Color(0xFFEF4444),
+                color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                 fontSize = 14.sp
             )
@@ -191,7 +195,7 @@ fun libraryScreen(
                 }
                 Text(
                     "Your watchlist is empty",
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onBackground,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -283,7 +287,7 @@ private fun watchlistStatChip(
         Spacer(Modifier.height(6.dp))
         Text(
             text = label, 
-            color = Color.White, 
+            color = MaterialTheme.colorScheme.onSurface,
             fontSize = 11.sp, // Slightly smaller font to fit 4 chips in a row comfortably
             fontWeight = FontWeight.Bold
         )
@@ -312,7 +316,7 @@ private fun animeWatchlistCard(
             modifier = Modifier
                 .size(width = 70.dp, height = 100.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .background(Color(0xFF2C2C3E))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
             AsyncImage(
                 model = anime.images.jpg.imageUrl,
@@ -329,7 +333,7 @@ private fun animeWatchlistCard(
         ) {
             Text(
                 anime.title,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
                 maxLines = 2,
@@ -363,7 +367,7 @@ private fun animeWatchlistCard(
 
                 Text(
                     "⭐ ${anime.score ?: "N/A"}",
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 12.sp
                 )
             }
@@ -374,7 +378,7 @@ private fun animeWatchlistCard(
             Icon(
                 Icons.Default.Delete,
                 contentDescription = "Remove",
-                tint = Color(0xFFEF4444)
+                tint = MaterialTheme.colorScheme.error,
             )
         }
     }
@@ -397,7 +401,7 @@ private fun watchlistCard(movie: TmdbMovie, onClick: () -> Unit, onRemove: () ->
             modifier = Modifier
                 .size(width = 70.dp, height = 100.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .background(Color(0xFF2C2C3E))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
             if (!movie.posterPath.isNullOrBlank()) {
                 AsyncImage(
@@ -416,7 +420,7 @@ private fun watchlistCard(movie: TmdbMovie, onClick: () -> Unit, onRemove: () ->
         ) {
             Text(
                 movie.displayTitle,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
                 maxLines = 2,
@@ -448,7 +452,7 @@ private fun watchlistCard(movie: TmdbMovie, onClick: () -> Unit, onRemove: () ->
                     Icon(Icons.Default.Star, null, tint = Color(0xFFFBBF24), modifier = Modifier.size(12.dp))
                     Text(
                         movie.voteAverage?.let { String.format("%.1f", it) } ?: "N/A",
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 12.sp
                     )
                 }
@@ -469,7 +473,7 @@ private fun watchlistCard(movie: TmdbMovie, onClick: () -> Unit, onRemove: () ->
             Icon(
                 Icons.Default.Delete,
                 "Remove",
-                tint = Color(0xFFEF4444),
+                tint = MaterialTheme.colorScheme.error,
                 modifier = Modifier.size(20.dp)
             )
         }

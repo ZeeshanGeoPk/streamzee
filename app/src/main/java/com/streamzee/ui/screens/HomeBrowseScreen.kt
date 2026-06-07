@@ -28,6 +28,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -51,10 +52,14 @@ import com.streamzee.data.TmdbMovie
 import com.streamzee.viewmodel.HomeBrowseUiState
 
 private const val TMDB_IMAGE_W500 = "https://image.tmdb.org/t/p/w500"
-private val Purple = Color(0xFFA855F7)
-private val CardBg = Color(0xFF161622)
-private val TextSecondary = Color(0xFF8E8E9F)
-private val ScreenBg = Color(0xFF050508)
+private val Purple: Color
+    @Composable get() = MaterialTheme.colorScheme.primary
+private val CardBg: Color
+    @Composable get() = MaterialTheme.colorScheme.surface
+private val TextSecondary: Color
+    @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
+private val ScreenBg: Color
+    @Composable get() = MaterialTheme.colorScheme.background
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -109,11 +114,15 @@ fun homeBrowseScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = MaterialTheme.colorScheme.onBackground,
+                )
             }
             Text(
                 browseState.section?.title.orEmpty(),
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onBackground,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.ExtraBold,
                 maxLines = 1,
@@ -186,7 +195,7 @@ private fun BrowseMovieCard(movie: TmdbMovie, onClick: () -> Unit) {
         Spacer(Modifier.height(8.dp))
         Text(
             movie.displayTitle,
-            color = Color.White,
+            color = MaterialTheme.colorScheme.onBackground,
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
             maxLines = 2,
@@ -220,7 +229,7 @@ private fun BrowseAnimeCard(show: MegaPlayShow, onClick: () -> Unit) {
         Spacer(Modifier.height(8.dp))
         Text(
             show.name,
-            color = Color.White,
+            color = MaterialTheme.colorScheme.onBackground,
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
             maxLines = 2,
@@ -272,7 +281,7 @@ private fun BrowseErrorState(message: String, onRetry: () -> Unit, modifier: Mod
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text(message, color = Color(0xFFEF4444), fontSize = 14.sp)
+        Text(message, color = MaterialTheme.colorScheme.error, fontSize = 14.sp)
         Spacer(Modifier.height(12.dp))
         Button(
             onClick = onRetry,
@@ -307,7 +316,13 @@ private fun RetryFooter(message: String, onRetry: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text(message, color = Color(0xFFEF4444), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(
+            message,
+            color = MaterialTheme.colorScheme.error,
+            fontSize = 12.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
         Text(
             "Retry",
             color = Purple,

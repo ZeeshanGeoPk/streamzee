@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -57,8 +58,10 @@ import com.streamzee.data.PlaybackSource
 import com.streamzee.data.TmdbMovie
 import com.streamzee.data.movieTvPlayerSources
 
-private val ScreenBg = Color(0xFF050508)
-private val Purple = Color(0xFFA855F7)
+private val ScreenBg: Color
+    @Composable get() = MaterialTheme.colorScheme.background
+private val Purple: Color
+    @Composable get() = MaterialTheme.colorScheme.primary
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable

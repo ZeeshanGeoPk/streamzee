@@ -147,11 +147,14 @@ data class MainUiState(
     val homeBrowse: HomeBrowseUiState = HomeBrowseUiState(),
     
     // Premium custom states
-    val themeMode: String = "Dark",
+    val themeMode: String = "System",
+    val accentColor: String = "Purple",
     val playbackQuality: String = "Auto (Best)",
     val languagePreference: String = "English",
     val subtitlesEnabled: Boolean = true,
     val notificationsEnabled: Boolean = true,
+    val reducedMotion: Boolean = false,
+    val settingsMessage: String? = null,
     val hoursWatched: Int = 285,
     val completedAnimeCount: Int = 32,
     val customCollections: List<CustomCollection> = listOf(
@@ -280,6 +283,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             repository.watchHistoryIdsFlow().collectLatest { historyIds ->
                 loadContinueWatching(_uiState.value.apiKey, historyIds)
+            }
+        }
+
+        viewModelScope.launch {
+            repository.appPreferencesFlow().collectLatest { preferences ->
+                _uiState.update {
+                    it.copy(
+                        themeMode = preferences.themeMode,
+                        accentColor = preferences.accentColor,
+                        playbackQuality = preferences.playbackQuality,
+                        languagePreference = preferences.language,
+                        subtitlesEnabled = preferences.subtitlesEnabled,
+                        notificationsEnabled = preferences.notificationsEnabled,
+                        reducedMotion = preferences.reducedMotion,
+                    )
+                }
             }
         }
     }
@@ -761,22 +780,71 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun updateThemeMode(mode: String) {
         _uiState.update { it.copy(themeMode = mode) }
+        viewModelScope.launch { repository.saveThemeMode(mode) }
+    }
+
+    fun updateAccentColor(color: String) {
+        _uiState.update { it.copy(accentColor = color) }
+        viewModelScope.launch { repository.saveAccentColor(color) }
     }
 
     fun updatePlaybackQuality(quality: String) {
         _uiState.update { it.copy(playbackQuality = quality) }
+        viewModelScope.launch { repository.savePlaybackQuality(quality) }
     }
 
     fun updateLanguagePreference(lang: String) {
         _uiState.update { it.copy(languagePreference = lang) }
+        viewModelScope.launch { repository.saveLanguage(lang) }
     }
 
     fun toggleSubtitles() {
-        _uiState.update { it.copy(subtitlesEnabled = !it.subtitlesEnabled) }
+        val enabled = !_uiState.value.subtitlesEnabled
+        _uiState.update { it.copy(subtitlesEnabled = enabled) }
+        viewModelScope.launch { repository.saveSubtitlesEnabled(enabled) }
     }
 
     fun toggleNotifications() {
-        _uiState.update { it.copy(notificationsEnabled = !it.notificationsEnabled) }
+        val enabled = !_uiState.value.notificationsEnabled
+        _uiState.update { it.copy(notificationsEnabled = enabled) }
+        viewModelScope.launch { repository.saveNotificationsEnabled(enabled) }
+    }
+
+    fun toggleReducedMotion() {
+        val enabled = !_uiState.value.reducedMotion
+        _uiState.update { it.copy(reducedMotion = enabled) }
+        viewModelScope.launch { repository.saveReducedMotion(enabled) }
+    }
+
+    fun updateApiKeyFromProfile(apiKey: String) {
+        if (apiKey.isBlank()) {
+            _uiState.update { it.copy(settingsMessage = "TMDB token cannot be empty.") }
+            return
+        }
+
+        viewModelScope.launch {
+            repository.saveApiKey(apiKey)
+            _uiState.update { it.copy(settingsMessage = "TMDB token updated.") }
+        }
+    }
+
+    fun clearAppCache() {
+        viewModelScope.launch {
+            val cleared = repository.clearCache()
+            _uiState.update {
+                it.copy(
+                    settingsMessage = if (cleared) {
+                        "Cache cleared."
+                    } else {
+                        "Some cached files could not be removed."
+                    }
+                )
+            }
+        }
+    }
+
+    fun clearSettingsMessage() {
+        _uiState.update { it.copy(settingsMessage = null) }
     }
 
     fun openDetails(movie: TmdbMovie) {

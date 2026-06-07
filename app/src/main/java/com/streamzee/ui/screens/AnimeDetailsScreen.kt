@@ -29,10 +29,14 @@ import coil.compose.AsyncImage
 import com.streamzee.data.MegaPlayShow
 import com.streamzee.data.MegaPlayEpisode
 
-private val Purple = Color(0xFFA855F7)
-private val DarkBg = Color(0xFF000000)
-private val CardBg = Color(0xFF161622)
-private val TextSec = Color(0xFF8E8E9F)
+private val Purple: Color
+    @Composable get() = MaterialTheme.colorScheme.primary
+private val DarkBg: Color
+    @Composable get() = MaterialTheme.colorScheme.background
+private val CardBg: Color
+    @Composable get() = MaterialTheme.colorScheme.surface
+private val TextSec: Color
+    @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
 
 @Composable
 fun animeDetailsScreen(
@@ -78,7 +82,7 @@ fun animeDetailsScreen(
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     Text(
                         "Episodes",
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onBackground,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(16.dp)
@@ -100,10 +104,14 @@ fun animeDetailsScreen(
                     .fillMaxWidth()
                     .padding(top = 100.dp) // Below the hero banner
                     .padding(16.dp)
-                    .background(Color.Red.copy(alpha = 0.8f), RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.errorContainer, RoundedCornerShape(8.dp))
                     .padding(12.dp)
             ) {
-                Text(message, color = Color.White, fontSize = 14.sp)
+                Text(
+                    message,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    fontSize = 14.sp,
+                )
             }
         }
         // 2. Add the Loading Overlay
@@ -201,7 +209,7 @@ private fun animeHeroSection(
                 ) {
                     Text(
                         "ANIME",
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onPrimary,
                         fontSize = 10.sp,
                         modifier = Modifier.padding(
                             horizontal = 6.dp,
@@ -258,7 +266,7 @@ private fun animeHeroSection(
                         if (isSaved)
                             Purple
                         else
-                            Color.White
+                            MaterialTheme.colorScheme.onBackground
                 )
 
                 Text(
@@ -266,7 +274,7 @@ private fun animeHeroSection(
                         " Saved to Watchlist"
                     else
                         " Add to Watchlist",
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onBackground,
                 )
             }
         }
@@ -292,7 +300,7 @@ private fun translationToggle(selected: String, onToggle: (String) -> Unit) {
             ) {
                 Text(
                     text = type.uppercase(),
-                    color = if (isSelected) Color.White else TextSec,
+                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else TextSec,
                     fontWeight = FontWeight.Bold,
                     fontSize = 13.sp
                 )
@@ -310,11 +318,16 @@ private fun episodeGridCard(num: String, onClick: () -> Unit) {
             .clickable { onClick() },
         color = CardBg,
         shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
         Box(contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(num, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(
+                    num,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                )
                 Text("EP", color = Purple, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold)
             }
         }

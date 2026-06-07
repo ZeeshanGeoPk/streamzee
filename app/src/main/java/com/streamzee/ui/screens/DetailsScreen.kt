@@ -26,10 +26,14 @@ import coil.compose.AsyncImage
 import com.streamzee.data.TmdbMovie
 import com.streamzee.data.TmdbEpisode
 
-private val Purple = Color(0xFFA855F7)
-private val DarkBg = Color(0xFF000000)
-private val CardBg = Color(0xFF161622)
-private val TextSec = Color(0xFF8E8E9F)
+private val Purple: Color
+    @Composable get() = MaterialTheme.colorScheme.primary
+private val DarkBg: Color
+    @Composable get() = MaterialTheme.colorScheme.background
+private val CardBg: Color
+    @Composable get() = MaterialTheme.colorScheme.surface
+private val TextSec: Color
+    @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
 private const val IMAGE_BASE = "https://image.tmdb.org/t/p/w780"
 
 @Composable
@@ -210,8 +214,15 @@ private fun actionButtonsSection(
             shape = RoundedCornerShape(8.dp),
             border = BorderStroke(1.dp, if (isSaved) Purple else Color.Gray)
         ) {
-            Icon(if (isSaved) Icons.Default.Check else Icons.Default.Add, null, tint = if (isSaved) Purple else Color.White)
-            Text(if (isSaved) " Saved to Watchlist" else " Add to Watchlist", color = Color.White)
+            Icon(
+                if (isSaved) Icons.Default.Check else Icons.Default.Add,
+                null,
+                tint = if (isSaved) Purple else MaterialTheme.colorScheme.onBackground,
+            )
+            Text(
+                if (isSaved) " Saved to Watchlist" else " Add to Watchlist",
+                color = MaterialTheme.colorScheme.onBackground,
+            )
         }
     }
 }
@@ -252,7 +263,11 @@ private fun seasonSelector(
             ) {
                 Text(
                     text = "Season $i", 
-                    color = Color.White, 
+                    color = if (isSelected) {
+                        MaterialTheme.colorScheme.onPrimary
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    },
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                 )
@@ -284,7 +299,12 @@ private fun episodeItem(episode: TmdbEpisode, onClick: () -> Unit) {
         Spacer(Modifier.width(12.dp))
         
         Column(modifier = Modifier.weight(1f)) {
-            Text(episode.name ?: "Episode ${episode.episodeNumber}", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Text(
+                episode.name ?: "Episode ${episode.episodeNumber}",
+                color = MaterialTheme.colorScheme.onBackground,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+            )
             Text("${episode.runtime ?: 45} min", color = TextSec, fontSize = 12.sp)
         }
         Icon(Icons.Default.FileDownload, null, tint = TextSec)
@@ -294,7 +314,13 @@ private fun episodeItem(episode: TmdbEpisode, onClick: () -> Unit) {
 @Composable
 private fun recommendationsSection(list: List<TmdbMovie>, onMovieClick: (TmdbMovie) -> Unit) {
     Column {
-        Text("More Like This", color = Color.White, modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold, fontSize = 18.sp)
+        Text(
+            "More Like This",
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.padding(16.dp),
+            fontWeight = FontWeight.Bold,
+            fontSize = 18.sp,
+        )
         LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             items(list) { movie ->
                 Box(

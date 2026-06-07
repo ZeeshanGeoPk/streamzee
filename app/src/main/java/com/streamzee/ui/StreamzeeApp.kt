@@ -19,7 +19,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.streamzee.data.playerSources
 import com.streamzee.ui.screens.animeDetailsScreen
@@ -57,13 +56,14 @@ fun streamzeeApp(viewModel: MainViewModel) {
         goBack()
     }
 
-    streamzeeTheme {
-        Surface(modifier = Modifier.fillMaxSize(), color = Color(0xFF050508)) {
+    streamzeeTheme(themeMode = uiState.themeMode, accentName = uiState.accentColor) {
+        val colors = androidx.compose.material3.MaterialTheme.colorScheme
+        Surface(modifier = Modifier.fillMaxSize(), color = colors.background) {
             Scaffold(
                 bottomBar = {
                     if (showBottomBar) {
                         NavigationBar(
-                            containerColor = Color(0xFF09090F),
+                            containerColor = colors.surface,
                             tonalElevation = 8.dp
                         ) {
                             NavigationBarItem(
@@ -72,11 +72,11 @@ fun streamzeeApp(viewModel: MainViewModel) {
                                 icon = { Icon(imageVector = Icons.Default.Home, contentDescription = "Home") },
                                 label = { Text("Home") },
                                 colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = Color(0xFFA855F7),
-                                    selectedTextColor = Color(0xFFA855F7),
-                                    indicatorColor = Color(0xFF1E1B29),
-                                    unselectedIconColor = Color(0xFF8E8E9F),
-                                    unselectedTextColor = Color(0xFF8E8E9F)
+                                    selectedIconColor = colors.primary,
+                                    selectedTextColor = colors.primary,
+                                    indicatorColor = colors.primaryContainer,
+                                    unselectedIconColor = colors.onSurfaceVariant,
+                                    unselectedTextColor = colors.onSurfaceVariant
                                 )
                             )
                             NavigationBarItem(
@@ -85,11 +85,11 @@ fun streamzeeApp(viewModel: MainViewModel) {
                                 icon = { Icon(imageVector = Icons.Default.Search, contentDescription = "Explore") },
                                 label = { Text("Explore") },
                                 colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = Color(0xFFA855F7),
-                                    selectedTextColor = Color(0xFFA855F7),
-                                    indicatorColor = Color(0xFF1E1B29),
-                                    unselectedIconColor = Color(0xFF8E8E9F),
-                                    unselectedTextColor = Color(0xFF8E8E9F)
+                                    selectedIconColor = colors.primary,
+                                    selectedTextColor = colors.primary,
+                                    indicatorColor = colors.primaryContainer,
+                                    unselectedIconColor = colors.onSurfaceVariant,
+                                    unselectedTextColor = colors.onSurfaceVariant
                                 )
                             )
                             NavigationBarItem(
@@ -98,11 +98,11 @@ fun streamzeeApp(viewModel: MainViewModel) {
                                 icon = { Icon(imageVector = Icons.Default.Download, contentDescription = "Downloads") },
                                 label = { Text("Downloads") },
                                 colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = Color(0xFFA855F7),
-                                    selectedTextColor = Color(0xFFA855F7),
-                                    indicatorColor = Color(0xFF1E1B29),
-                                    unselectedIconColor = Color(0xFF8E8E9F),
-                                    unselectedTextColor = Color(0xFF8E8E9F)
+                                    selectedIconColor = colors.primary,
+                                    selectedTextColor = colors.primary,
+                                    indicatorColor = colors.primaryContainer,
+                                    unselectedIconColor = colors.onSurfaceVariant,
+                                    unselectedTextColor = colors.onSurfaceVariant
                                 )
                             )
                             NavigationBarItem(
@@ -111,11 +111,11 @@ fun streamzeeApp(viewModel: MainViewModel) {
                                 icon = { Icon(imageVector = Icons.Default.Favorite, contentDescription = "Watchlist") },
                                 label = { Text("Watchlist") },
                                 colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = Color(0xFFA855F7),
-                                    selectedTextColor = Color(0xFFA855F7),
-                                    indicatorColor = Color(0xFF1E1B29),
-                                    unselectedIconColor = Color(0xFF8E8E9F),
-                                    unselectedTextColor = Color(0xFF8E8E9F)
+                                    selectedIconColor = colors.primary,
+                                    selectedTextColor = colors.primary,
+                                    indicatorColor = colors.primaryContainer,
+                                    unselectedIconColor = colors.onSurfaceVariant,
+                                    unselectedTextColor = colors.onSurfaceVariant
                                 )
                             )
                             NavigationBarItem(
@@ -124,11 +124,11 @@ fun streamzeeApp(viewModel: MainViewModel) {
                                 icon = { Icon(imageVector = Icons.Default.Person, contentDescription = "Profile") },
                                 label = { Text("Profile") },
                                 colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = Color(0xFFA855F7),
-                                    selectedTextColor = Color(0xFFA855F7),
-                                    indicatorColor = Color(0xFF1E1B29),
-                                    unselectedIconColor = Color(0xFF8E8E9F),
-                                    unselectedTextColor = Color(0xFF8E8E9F)
+                                    selectedIconColor = colors.primary,
+                                    selectedTextColor = colors.primary,
+                                    indicatorColor = colors.primaryContainer,
+                                    unselectedIconColor = colors.onSurfaceVariant,
+                                    unselectedTextColor = colors.onSurfaceVariant
                                 )
                             )
                         }
@@ -168,6 +168,7 @@ fun streamzeeApp(viewModel: MainViewModel) {
                         },
                         isLoading = uiState.isLoading,
                         isRefreshing = uiState.isRefreshingHome,
+                        reducedMotion = uiState.reducedMotion,
                         onRefresh = viewModel::refreshHome,
                         errorMessage = uiState.errorMessage,
                         modifier = contentModifier,
@@ -230,11 +231,15 @@ fun streamzeeApp(viewModel: MainViewModel) {
                     is Screen.Profile -> profileScreen(
                         uiState = uiState,
                         updateTheme = viewModel::updateThemeMode,
+                        updateAccent = viewModel::updateAccentColor,
+                        updateApiKey = viewModel::updateApiKeyFromProfile,
                         updateQuality = viewModel::updatePlaybackQuality,
                         updateLanguage = viewModel::updateLanguagePreference,
                         toggleSubtitles = viewModel::toggleSubtitles,
                         toggleNotifications = viewModel::toggleNotifications,
-                        onLogout = { viewModel.openHome() },
+                        toggleReducedMotion = viewModel::toggleReducedMotion,
+                        clearCache = viewModel::clearAppCache,
+                        clearMessage = viewModel::clearSettingsMessage,
                         modifier = contentModifier,
                     )
                     is Screen.Details -> { 

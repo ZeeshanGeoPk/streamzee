@@ -1,390 +1,560 @@
 package com.streamzee.ui.screens
 
-import com.streamzee.ui.screens.comingSoonOverlay
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CleaningServices
+import androidx.compose.material.icons.filled.ColorLens
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.HighQuality
+import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Subtitles
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
+import com.streamzee.ui.theme.accentColor
 import com.streamzee.viewmodel.MainUiState
 
-private val Purple = Color(0xFFA855F7)
-private val CardBg = Color(0xFF161622)
-private val TextSecondary = Color(0xFF8E8E9F)
-private val ScreenBg = Color(0xFF050508)
+private val accentNames = listOf(
+    "Purple",
+    "Blue",
+    "Green",
+    "Teal",
+    "Orange",
+    "Red",
+    "Pink",
+    "Indigo",
+)
+
+private val themeModes = listOf("Light", "Dark", "Lite Dark", "System")
 
 @Composable
 fun profileScreen(
     uiState: MainUiState,
     updateTheme: (String) -> Unit,
+    updateAccent: (String) -> Unit,
+    updateApiKey: (String) -> Unit,
     updateQuality: (String) -> Unit,
     updateLanguage: (String) -> Unit,
     toggleSubtitles: () -> Unit,
     toggleNotifications: () -> Unit,
-    onLogout: () -> Unit,
-    modifier: Modifier = Modifier
+    toggleReducedMotion: () -> Unit,
+    clearCache: () -> Unit,
+    clearMessage: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Box(modifier = modifier.fillMaxSize()) {
-    LazyColumn(
-        modifier = modifier
-            .fillMaxSize()
-            .background(ScreenBg)
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp),
-        contentPadding = PaddingValues(vertical = 16.dp)
-    ) {
-        // ── Profile Header Card ──────────────────────────────────────────
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Spacer(Modifier.weight(1f))
-                IconButton(onClick = {}) {
-                    Icon(Icons.Default.Settings, "Settings", tint = Purple)
-                }
-            }
-        }
+    var showApiKeyDialog by remember { mutableStateOf(false) }
+    var showClearCacheDialog by remember { mutableStateOf(false) }
+    var showQualityDialog by remember { mutableStateOf(false) }
+    var showLanguageDialog by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
 
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // Avatar with gradient border
-                Box(
-                    modifier = Modifier
-                        .size(80.dp)
-                        .border(
-                            width = 2.dp,
-                            brush = Brush.linearGradient(listOf(Purple, Color(0xFF6366F1))),
-                            shape = CircleShape
-                        )
-                        .padding(3.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF2C2C3E))
-                ) {
-                    AsyncImage(
-                        model = "https://i.pinimg.com/736x/9e/2b/e4/9e2be4f1a241a8be8d4836d5fbbe2ee2.jpg",
-                        contentDescription = "Avatar",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
-                    // Online indicator
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .size(16.dp)
-                            .background(Color(0xFF22C55E), CircleShape)
-                            .border(2.dp, ScreenBg, CircleShape)
-                    )
-                }
-
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Text(
-                            "Zeeshan Ali",
-                            color = Color.White,
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Icon(
-                            Icons.Default.CheckCircle,
-                            contentDescription = "Verified",
-                            tint = Color(0xFF22C55E),
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                    Text(
-                        "zeeshanali@gmail.com",
-                        color = TextSecondary,
-                        fontSize = 14.sp
-                    )
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(
-                                Brush.horizontalGradient(
-                                    listOf(Purple, Color(0xFF6366F1))
-                                )
-                            )
-                            .padding(horizontal = 12.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            "⭐ Premium Plan",
-                            color = Color.White,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                }
-            }
+    LaunchedEffect(uiState.settingsMessage) {
+        uiState.settingsMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            clearMessage()
         }
-
-        // ── Stats Row ────────────────────────────────────────────────────
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                statCard(
-                    title = "Hours Watched",
-                    value = uiState.hoursWatched.toString(),
-                    modifier = Modifier.weight(1f)
-                )
-                statCard(
-                    title = "Favorite Genres",
-                    value = "Action, Anime,\nSci-Fi",
-                    modifier = Modifier.weight(1f)
-                )
-                statCard(
-                    title = "Anime Completed",
-                    value = uiState.completedAnimeCount.toString(),
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
-
-        // ── Settings ─────────────────────────────────────────────────────
-        item {
-            Text(
-                "Settings",
-                color = Color.White,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = CardBg)
-            ) {
-                Column {
-                    settingsRow(
-                        icon = Icons.Default.DarkMode,
-                        label = "Theme Mode",
-                        value = uiState.themeMode,
-                        onClick = {
-                            updateTheme(if (uiState.themeMode == "Dark") "Light" else "Dark")
-                        }
-                    )
-                    divider()
-                    settingsRow(
-                        icon = Icons.Default.HighQuality,
-                        label = "Playback Quality",
-                        value = uiState.playbackQuality,
-                        onClick = {
-                            val qualities = listOf("Auto (Best)", "1080p", "720p", "480p")
-                            val idx = qualities.indexOf(uiState.playbackQuality)
-                            updateQuality(qualities[(idx + 1) % qualities.size])
-                        }
-                    )
-                    divider()
-                    settingsRow(
-                        icon = Icons.Default.Language,
-                        label = "Language",
-                        value = uiState.languagePreference,
-                        onClick = {
-                            val langs = listOf("English", "Japanese", "Korean", "Spanish")
-                            val idx = langs.indexOf(uiState.languagePreference)
-                            updateLanguage(langs[(idx + 1) % langs.size])
-                        }
-                    )
-                    divider()
-                    settingsRow(
-                        icon = Icons.Default.Subtitles,
-                        label = "Subtitles",
-                        value = if (uiState.subtitlesEnabled) "On" else "Off",
-                        onClick = toggleSubtitles
-                    )
-                    divider()
-                    settingsRow(
-                        icon = Icons.Default.Notifications,
-                        label = "Notifications",
-                        value = if (uiState.notificationsEnabled) "On" else "Off",
-                        onClick = toggleNotifications
-                    )
-                }
-            }
-        }
-
-        // ── More Section ─────────────────────────────────────────────────
-        item {
-            Text(
-                "More",
-                color = Color.White,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = CardBg)
-            ) {
-                Column {
-                    settingsRow(
-                        icon = Icons.Default.History,
-                        label = "Watch History",
-                        value = "",
-                        onClick = {}
-                    )
-                    divider()
-                    settingsRow(
-                        icon = Icons.Default.Download,
-                        label = "My Downloads",
-                        value = "",
-                        onClick = {}
-                    )
-                    divider()
-                    settingsRow(
-                        icon = Icons.Default.Update,
-                        label = "App Updates",
-                        value = "v2.1.0",
-                        onClick = {}
-                    )
-                    divider()
-                    settingsRow(
-                        icon = Icons.Default.Help,
-                        label = "Help & Support",
-                        value = "",
-                        onClick = {}
-                    )
-                }
-            }
-        }
-
-        // ── Logout Button ────────────────────────────────────────────────
-        item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onLogout() }
-                    .padding(vertical = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    Icons.Default.Logout,
-                    contentDescription = "Logout",
-                    tint = Color(0xFFEF4444),
-                    modifier = Modifier.size(24.dp)
-                )
-                Text(
-                    "Logout",
-                    color = Color(0xFFEF4444),
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-        }
-
-        item { Spacer(Modifier.height(8.dp)) }
     }
-} 
-    comingSoonOverlay("Profile Features") // Overlay for non-functional features
-}
 
-@Composable
-private fun statCard(title: String, value: String, modifier: Modifier = Modifier) {
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBg)
-    ) {
-        Column(
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        containerColor = MaterialTheme.colorScheme.background,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+    ) { padding ->
+        LazyColumn(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+                .fillMaxSize()
+                .padding(padding)
+                .padding(horizontal = 16.dp),
+            contentPadding = PaddingValues(vertical = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = "Profile",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        text = "Playback, appearance and app preferences",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            item {
+                SettingsSection(title = "Appearance") {
+                    SettingsLabel(
+                        icon = Icons.Default.ColorLens,
+                        title = "Accent",
+                        subtitle = uiState.accentColor,
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        accentNames.forEach { name ->
+                            AccentSwatch(
+                                name = name,
+                                selected = uiState.accentColor == name,
+                                onClick = { updateAccent(name) },
+                            )
+                        }
+                    }
+                    SettingsDivider()
+                    SettingsLabel(
+                        icon = Icons.Default.DarkMode,
+                        title = "Theme",
+                        subtitle = uiState.themeMode,
+                    )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        themeModes.chunked(2).forEach { rowModes ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                rowModes.forEach { mode ->
+                                    FilterChip(
+                                        selected = uiState.themeMode == mode,
+                                        onClick = { updateTheme(mode) },
+                                        label = {
+                                            Text(
+                                                text = mode,
+                                                modifier = Modifier.fillMaxWidth(),
+                                                maxLines = 1,
+                                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                            )
+                                        },
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    SettingsDivider()
+                    SwitchSettingsRow(
+                        icon = Icons.Default.AutoAwesome,
+                        title = "Reduced motion",
+                        subtitle = "Limit carousel and interface animations",
+                        checked = uiState.reducedMotion,
+                        onCheckedChange = { toggleReducedMotion() },
+                    )
+                }
+            }
+
+            item {
+                SettingsSection(title = "Playback") {
+                    ClickableSettingsRow(
+                        icon = Icons.Default.HighQuality,
+                        title = "Preferred quality",
+                        value = uiState.playbackQuality,
+                        onClick = { showQualityDialog = true },
+                    )
+                    SettingsDivider()
+                    ClickableSettingsRow(
+                        icon = Icons.Default.Language,
+                        title = "Content language",
+                        value = uiState.languagePreference,
+                        onClick = { showLanguageDialog = true },
+                    )
+                    SettingsDivider()
+                    SwitchSettingsRow(
+                        icon = Icons.Default.Subtitles,
+                        title = "Subtitles",
+                        subtitle = "Enable subtitles by default",
+                        checked = uiState.subtitlesEnabled,
+                        onCheckedChange = { toggleSubtitles() },
+                    )
+                    SettingsDivider()
+                    SwitchSettingsRow(
+                        icon = Icons.Default.Notifications,
+                        title = "Notifications",
+                        subtitle = "New releases and watchlist updates",
+                        checked = uiState.notificationsEnabled,
+                        onCheckedChange = { toggleNotifications() },
+                    )
+                }
+            }
+
+            item {
+                SettingsSection(title = "Data") {
+                    ClickableSettingsRow(
+                        icon = Icons.Default.Key,
+                        title = "TMDB API token",
+                        value = maskApiKey(uiState.apiKey),
+                        onClick = { showApiKeyDialog = true },
+                    )
+                    SettingsDivider()
+                    ClickableSettingsRow(
+                        icon = Icons.Default.CleaningServices,
+                        title = "Clear cache",
+                        value = "Images and temporary files",
+                        danger = true,
+                        onClick = { showClearCacheDialog = true },
+                    )
+                }
+            }
+
+            item {
+                Text(
+                    text = "Streamzee 1.0.0 beta 2",
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Spacer(Modifier.height(8.dp))
+            }
+        }
+    }
+
+    if (showApiKeyDialog) {
+        ApiKeyDialog(
+            currentKey = uiState.apiKey.orEmpty(),
+            onDismiss = { showApiKeyDialog = false },
+            onSave = {
+                updateApiKey(it)
+                showApiKeyDialog = false
+            },
+        )
+    }
+
+    if (showClearCacheDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearCacheDialog = false },
+            title = { Text("Clear app cache?") },
+            text = {
+                Text("Downloaded images and temporary files will be removed. Your watchlist, history and settings will stay.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        clearCache()
+                        showClearCacheDialog = false
+                    }
+                ) {
+                    Text("Clear", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearCacheDialog = false }) {
+                    Text("Cancel")
+                }
+            },
+        )
+    }
+
+    if (showQualityDialog) {
+        ChoiceDialog(
+            title = "Preferred quality",
+            choices = listOf("Auto (Best)", "1080p", "720p", "480p"),
+            selected = uiState.playbackQuality,
+            onSelect = {
+                updateQuality(it)
+                showQualityDialog = false
+            },
+            onDismiss = { showQualityDialog = false },
+        )
+    }
+
+    if (showLanguageDialog) {
+        ChoiceDialog(
+            title = "Content language",
+            choices = listOf("English", "Japanese", "Korean", "Spanish"),
+            selected = uiState.languagePreference,
+            onSelect = {
+                updateLanguage(it)
+                showLanguageDialog = false
+            },
+            onDismiss = { showLanguageDialog = false },
+        )
+    }
+}
+
+@Composable
+private fun SettingsSection(
+    title: String,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        ) {
+            Column(content = content)
+        }
+    }
+}
+
+@Composable
+private fun AccentSwatch(name: String, selected: Boolean, onClick: () -> Unit) {
+    val color = accentColor(name)
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier
+            .size(36.dp)
+            .clip(CircleShape)
+            .then(
+                if (selected) {
+                    Modifier.border(2.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
+                } else {
+                    Modifier
+                }
+            ),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(26.dp)
+                .background(color, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (selected) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = "$name accent selected",
+                    tint = Color.White,
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsLabel(icon: ImageVector, title: String, subtitle: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+        Column {
+            Text(title, fontWeight = FontWeight.Medium)
             Text(
-                title,
-                color = TextSecondary,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1
-            )
-            Text(
-                value,
-                color = Color.White,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                lineHeight = 22.sp
+                subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
 }
 
 @Composable
-private fun settingsRow(
+private fun ClickableSettingsRow(
     icon: ImageVector,
-    label: String,
+    title: String,
     value: String,
-    onClick: () -> Unit
+    danger: Boolean = false,
+    onClick: () -> Unit,
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 14.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(icon, contentDescription = label, tint = TextSecondary, modifier = Modifier.size(22.dp))
-            Text(label, color = Color.White, fontSize = 15.sp)
-        }
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (value.isNotBlank()) {
-                Text(value, color = TextSecondary, fontSize = 14.sp)
-            }
-            Icon(
-                Icons.Default.ChevronRight,
-                contentDescription = null,
-                tint = TextSecondary,
-                modifier = Modifier.size(18.dp)
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = if (danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                title,
+                fontWeight = FontWeight.Medium,
+                color = if (danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                value,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
             )
         }
     }
 }
 
 @Composable
-private fun divider() {
+private fun SwitchSettingsRow(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCheckedChange(!checked) }
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, fontWeight = FontWeight.Medium)
+            Text(
+                subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
+
+@Composable
+private fun SettingsDivider() {
     HorizontalDivider(
-        thickness = 0.5.dp,
-        color = Color(0xFF2C2C3E),
-        modifier = Modifier.padding(horizontal = 16.dp)
+        modifier = Modifier.padding(horizontal = 16.dp),
+        color = MaterialTheme.colorScheme.outlineVariant,
     )
+}
+
+@Composable
+private fun ApiKeyDialog(
+    currentKey: String,
+    onDismiss: () -> Unit,
+    onSave: (String) -> Unit,
+) {
+    var value by remember(currentKey) { mutableStateOf(currentKey) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Update TMDB token") },
+        text = {
+            OutlinedTextField(
+                value = value,
+                onValueChange = { value = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Read access token") },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(value.trim()) }, enabled = value.isNotBlank()) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        },
+    )
+}
+
+@Composable
+private fun ChoiceDialog(
+    title: String,
+    choices: List<String>,
+    selected: String,
+    onSelect: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column {
+                choices.forEach { choice ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(choice) }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(choice, modifier = Modifier.weight(1f))
+                        if (choice == selected) {
+                            Icon(
+                                Icons.Default.Check,
+                                contentDescription = "Selected",
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        },
+    )
+}
+
+private fun maskApiKey(apiKey: String?): String {
+    if (apiKey.isNullOrBlank()) return "Not configured"
+    if (apiKey.length <= 8) return "••••••••"
+    return "${apiKey.take(4)}••••${apiKey.takeLast(4)}"
 }
