@@ -18,7 +18,9 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.async
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 //val movies = repository.fetchTrending(apiKey)
@@ -88,17 +90,24 @@ data class HomeBrowseUiState(
     val anime: List<MegaPlayShow> = emptyList(),
     val nextPage: Int = 1,
     val isLoading: Boolean = false,
+    val isRefreshing: Boolean = false,
     val endReached: Boolean = false,
     val errorMessage: String? = null,
 )
 
 data class ContinueWatchingItem(
-    val movie: TmdbMovie,
+    val movie: TmdbMovie? = null,
+    val anime: MegaPlayShow? = null,
     val progress: Float,
     val positionMs: Long,
     val season: Int? = null,
     val episode: Int? = null,
-)
+) {
+    val key: String
+        get() = movie?.let { "${it.mediaType}_${it.tmdbID}" }
+            ?: anime?.let { "anime_${it.animeID}" }
+            ?: "unknown"
+}
 
 data class MainUiState(
     val apiKey: String? = null,
@@ -117,8 +126,10 @@ data class MainUiState(
     val searchResults: List<TmdbMovie> = emptyList(),
     val animeSearchResults: List<MegaPlayShow> = emptyList(),
     val isLoading: Boolean = false,
+    val isRefreshingHome: Boolean = false,
     val isSearching: Boolean = false,
     val isLoadingSaved: Boolean = false,
+    val isRefreshingLibrary: Boolean = false,
     val currentMovieWatchProgressMs: Long? = null,
     val subtitleSearchResults: List<com.streamzee.data.SubtitleItem> = emptyList(),
     val isSearchingSubtitles: Boolean = false,
@@ -176,6 +187,7 @@ private data class HomeContent(
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = StreamzeeRepository(NetworkClient.tmdbApi, application)
+    private var continueWatchingJob: Job? = null
 
     private val _uiState = MutableStateFlow(MainUiState())
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
@@ -385,9 +397,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun loadHomeContent(apiKey: String) {
+    private fun loadHomeContent(apiKey: String, isRefresh: Boolean = false) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            _uiState.update {
+                it.copy(
+                    isLoading = !isRefresh,
+                    isRefreshingHome = isRefresh,
+                    errorMessage = null,
+                )
+            }
             try {
                 val content = coroutineScope {
                     val trendingMovies = async { runCatching { repository.fetchTrendingMovies(apiKey) }.getOrDefault(emptyList()) }
@@ -426,16 +444,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         topTv = content.topTv,
                         topAnime = content.topAnime,
                         isLoading = false,
+                        isRefreshingHome = false,
                     )
                 }
             } catch (exception: Exception) {
                 _uiState.update {
                     it.copy(
                         isLoading = false,
+                        isRefreshingHome = false,
                         errorMessage = "Unable to load home content: ${exception.message ?: "network error"}",
                     )
                 }
             }
+        }
+    }
+
+    fun refreshHome() {
+        val apiKey = _uiState.value.apiKey
+        if (apiKey.isNullOrBlank() || _uiState.value.isRefreshingHome) return
+
+        loadHomeContent(apiKey, isRefresh = true)
+        viewModelScope.launch {
+            loadContinueWatching(apiKey, repository.watchHistoryIdsFlow().first())
         }
     }
 
@@ -450,13 +480,41 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun loadNextHomeBrowsePage() {
+        if (_uiState.value.homeBrowse.isRefreshing) return
+        loadHomeBrowsePage(isRefresh = false)
+    }
+
+    fun refreshHomeBrowse() {
+        val section = _uiState.value.homeBrowse.section ?: return
+        if (_uiState.value.homeBrowse.isRefreshing) return
+
+        _uiState.update {
+            it.copy(
+                homeBrowse = it.homeBrowse.copy(
+                    nextPage = 1,
+                    isRefreshing = true,
+                    endReached = false,
+                    errorMessage = null,
+                )
+            )
+        }
+        loadHomeBrowsePage(isRefresh = true)
+    }
+
+    private fun loadHomeBrowsePage(isRefresh: Boolean) {
         val browse = _uiState.value.homeBrowse
         val section = browse.section ?: return
-        if (browse.isLoading || browse.endReached) return
+        if (browse.isLoading || (!isRefresh && browse.endReached)) return
 
         viewModelScope.launch {
             _uiState.update {
-                it.copy(homeBrowse = it.homeBrowse.copy(isLoading = true, errorMessage = null))
+                it.copy(
+                    homeBrowse = it.homeBrowse.copy(
+                        isLoading = !isRefresh,
+                        isRefreshing = isRefresh,
+                        errorMessage = null,
+                    )
+                )
             }
 
             try {
@@ -468,6 +526,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         it.copy(
                             homeBrowse = it.homeBrowse.copy(
                                 isLoading = false,
+                                isRefreshing = false,
                                 endReached = true,
                                 errorMessage = "TMDB token is required.",
                             )
@@ -479,12 +538,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 if (section.isAnime) {
                     val newItems = fetchHomeBrowseAnime(section, page)
                     _uiState.update {
-                        val merged = (it.homeBrowse.anime + newItems).distinctBy { anime -> anime.animeID }
+                        val merged = if (isRefresh) {
+                            newItems.distinctBy { anime -> anime.animeID }
+                        } else {
+                            (it.homeBrowse.anime + newItems).distinctBy { anime -> anime.animeID }
+                        }
                         it.copy(
                             homeBrowse = it.homeBrowse.copy(
                                 anime = merged,
                                 nextPage = page + 1,
                                 isLoading = false,
+                                isRefreshing = false,
                                 endReached = newItems.isEmpty(),
                             )
                         )
@@ -492,12 +556,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 } else {
                     val newItems = fetchHomeBrowseMovies(section, apiKey!!, page)
                     _uiState.update {
-                        val merged = (it.homeBrowse.movies + newItems).distinctBy { movie -> movie.tmdbID }
+                        val merged = if (isRefresh) {
+                            newItems.distinctBy { movie -> movie.tmdbID }
+                        } else {
+                            (it.homeBrowse.movies + newItems).distinctBy { movie -> movie.tmdbID }
+                        }
                         it.copy(
                             homeBrowse = it.homeBrowse.copy(
                                 movies = merged,
                                 nextPage = page + 1,
                                 isLoading = false,
+                                isRefreshing = false,
                                 endReached = newItems.isEmpty(),
                             )
                         )
@@ -508,6 +577,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     it.copy(
                         homeBrowse = it.homeBrowse.copy(
                             isLoading = false,
+                            isRefreshing = false,
                             errorMessage = "Unable to load more: ${exception.message ?: "network error"}",
                         )
                     )
@@ -536,15 +606,39 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
 
     private fun loadContinueWatching(apiKey: String?, historyIds: List<String>) {
-        if (apiKey.isNullOrBlank() || historyIds.isEmpty()) {
+        if (historyIds.isEmpty()) {
+            continueWatchingJob?.cancel()
             _uiState.update { it.copy(continueWatching = emptyList()) }
             return
         }
 
-        viewModelScope.launch {
+        continueWatchingJob?.cancel()
+        continueWatchingJob = viewModelScope.launch {
+            val existingItems = _uiState.value.continueWatching.associateBy { it.key }
             val items = historyIds.take(12).mapNotNull { mediaKey ->
                 try {
                     val id = mediaKey.substringAfter("_")
+                    if (mediaKey.startsWith("anime_")) {
+                        val (positionMs, _, episode) = repository.watchProgressFlow(mediaKey).first()
+                        val anime = try {
+                            repository.getAnimeShowById(id.toInt())
+                        } catch (exception: CancellationException) {
+                            throw exception
+                        } catch (exception: Exception) {
+                            existingItems[mediaKey]?.anime
+                                ?: findLoadedAnime(id)
+                                ?: return@mapNotNull null
+                        }
+
+                        return@mapNotNull ContinueWatchingItem(
+                            anime = anime,
+                            progress = 0.08f,
+                            positionMs = positionMs,
+                            episode = episode,
+                        )
+                    }
+
+                    if (apiKey.isNullOrBlank()) return@mapNotNull null
                     val isTv = mediaKey.startsWith("tv_")
                     val movie = if (isTv) {
                         repository.getTvShowDetails(apiKey, id).copy(mediaType = "tv")
@@ -560,11 +654,40 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         episode = episode.takeIf { isTv },
                     )
                 } catch (exception: Exception) {
-                    null
+                    if (exception is CancellationException) throw exception
+                    existingItems[mediaKey]
                 }
             }
 
             _uiState.update { it.copy(continueWatching = items) }
+        }
+    }
+
+    private fun findLoadedAnime(animeId: String): MegaPlayShow? {
+        val state = _uiState.value
+        return (
+            state.trendingAnime +
+                state.recentAnime +
+                state.topAnime +
+                state.animeSearchResults +
+                state.homeBrowse.anime
+            ).firstOrNull { it.animeID == animeId }
+    }
+
+    private fun addAnimeToContinueWatching(show: MegaPlayShow, episodeNumber: Int) {
+        val item = ContinueWatchingItem(
+            anime = show,
+            progress = 0.08f,
+            positionMs = 0L,
+            episode = episodeNumber,
+        )
+
+        _uiState.update {
+            it.copy(
+                continueWatching = (
+                    listOf(item) + it.continueWatching.filterNot { existing -> existing.key == item.key }
+                    ).take(12)
+            )
         }
     }
 
@@ -583,6 +706,49 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         navigateTo(Screen.Library)
         loadSavedMovies(_uiState.value.apiKey, ids)
         loadSavedAnime(ids) // Added this line
+    }
+
+    fun refreshLibrary() {
+        val state = _uiState.value
+        if (state.isRefreshingLibrary) return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRefreshingLibrary = true, errorMessage = null) }
+
+            val apiKey = _uiState.value.apiKey
+            val savedIds = _uiState.value.savedIds
+
+            val movies = savedIds.mapNotNull { mediaKey ->
+                if (!mediaKey.startsWith("movie_") && !mediaKey.startsWith("tv_")) {
+                    return@mapNotNull null
+                }
+                if (apiKey.isNullOrBlank()) return@mapNotNull null
+
+                val id = mediaKey.substringAfter("_")
+                runCatching {
+                    if (mediaKey.startsWith("tv_")) {
+                        repository.getTvShowDetails(apiKey, id).copy(mediaType = "tv")
+                    } else {
+                        repository.getMovieDetails(apiKey, id).copy(mediaType = "movie")
+                    }
+                }.getOrNull()
+            }
+
+            val anime = savedIds.mapNotNull { mediaKey ->
+                if (!mediaKey.startsWith("anime_")) return@mapNotNull null
+                runCatching {
+                    repository.getAnimeById(mediaKey.removePrefix("anime_").toInt())
+                }.getOrNull()
+            }
+
+            _uiState.update {
+                it.copy(
+                    savedMovies = movies,
+                    savedAnime = anime,
+                    isRefreshingLibrary = false,
+                )
+            }
+        }
     }
 
     fun openDownloads() {
@@ -669,7 +835,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // MEGA-PLAY MAL ENDPOINT: /stream/mal/{mal-id}/{ep-num}/{language}
         // show.animeMalID is the MAL ID we got from Jikan
         val megaPlayUrl = "https://megaplay.buzz/stream/mal/${show.animeMalID}/$episodeNumber/$language"
-        
+
+        addAnimeToContinueWatching(show, episodeNumber)
+        viewModelScope.launch {
+            repository.saveAnimeWatchProgress(show.animeID, episodeNumber)
+        }
+
         navigateTo(Screen.AnimePlayer(show, episodeNumber, megaPlayUrl))
     }
     

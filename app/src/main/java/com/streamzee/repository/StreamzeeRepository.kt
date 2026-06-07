@@ -274,6 +274,10 @@ class StreamzeeRepository(
         AppDataStore.saveWatchProgress(context, movieId, positionMs, season, episode)
     }
 
+    suspend fun saveAnimeWatchProgress(animeId: String, episode: Int, positionMs: Long = 0L) {
+        AppDataStore.saveAnimeWatchProgress(context, animeId, episode, positionMs)
+    }
+
     suspend fun searchAnime(query: String): List<MegaPlayShow> = withContext(Dispatchers.IO) {
         val jikanResults = api.searchJikan(query)
         jikanResults.data.toMegaPlayShows()
@@ -281,6 +285,10 @@ class StreamzeeRepository(
 
     suspend fun getAnimeById(malId: Int): JikanAnime {
         return api.getAnimeById(malId).data
+    }
+
+    suspend fun getAnimeShowById(malId: Int): MegaPlayShow {
+        return listOf(api.getAnimeById(malId).data).toMegaPlayShows().first()
     }
 
     private fun List<TmdbMovie>.asMovies(): List<TmdbMovie> =

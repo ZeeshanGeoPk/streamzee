@@ -167,6 +167,8 @@ fun streamzeeApp(viewModel: MainViewModel) {
                             viewModel.toggleSaved(id)
                         },
                         isLoading = uiState.isLoading,
+                        isRefreshing = uiState.isRefreshingHome,
+                        onRefresh = viewModel::refreshHome,
                         errorMessage = uiState.errorMessage,
                         modifier = contentModifier,
                     )
@@ -174,6 +176,7 @@ fun streamzeeApp(viewModel: MainViewModel) {
                         browseState = uiState.homeBrowse,
                         onBack = goBack,
                         onLoadMore = viewModel::loadNextHomeBrowsePage,
+                        onRefresh = viewModel::refreshHomeBrowse,
                         onMovieClicked = viewModel::openDetails,
                         onAnimeClicked = viewModel::openAnimeDetails,
                         modifier = contentModifier,
@@ -198,6 +201,8 @@ fun streamzeeApp(viewModel: MainViewModel) {
                         savedAnime = uiState.savedAnime,
                         savedIds = uiState.savedIds,
                         isLoading = uiState.isLoadingSaved,
+                        isRefreshing = uiState.isRefreshingLibrary,
+                        onRefresh = viewModel::refreshLibrary,
                         errorMessage = uiState.errorMessage,
                         onBack = goBack,
                         onMovieClicked = { viewModel.openDetails(it) },

@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,6 +38,7 @@ sealed class WatchlistItem {
     data class Anime(val data: JikanAnime) : WatchlistItem()
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun libraryScreen(
     savedMovies: List<TmdbMovie>,
@@ -47,17 +49,22 @@ fun libraryScreen(
     onRemove: (String, String) -> Unit,
     onBack: () -> Unit,
     isLoading: Boolean,
+    isRefreshing: Boolean,
+    onRefresh: () -> Unit,
     errorMessage: String?,
     modifier: Modifier = Modifier,
 ) {
     var selectedFilter by remember { mutableStateOf("All") }
     val filters = listOf("All", "Movies", "TV Shows", "Anime")
 
-    Column(
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = onRefresh,
         modifier = modifier
             .fillMaxSize()
             .background(ScreenBg)
     ) {
+        Column(modifier = Modifier.fillMaxSize()) {
         // ── Header ───────────────────────────────────────────
         Row(
             modifier = Modifier
@@ -194,7 +201,7 @@ fun libraryScreen(
                     fontSize = 14.sp
                 )
             }
-            return
+            return@Column
         }
 
         // ── Content List ─────────────────────────────────────
@@ -248,6 +255,7 @@ fun libraryScreen(
                             }
                         }
             }
+        }
         }
     }
 }

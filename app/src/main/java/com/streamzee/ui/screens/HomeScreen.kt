@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -80,7 +81,7 @@ private sealed interface HomeHeroItem {
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun homeScreen(
     trendingMovies: List<TmdbMovie>,
@@ -101,6 +102,8 @@ fun homeScreen(
     onSeeAllClicked: (HomeSection) -> Unit,
     onToggleSave: (String) -> Unit,
     isLoading: Boolean,
+    isRefreshing: Boolean,
+    onRefresh: () -> Unit,
     errorMessage: String?,
     modifier: Modifier = Modifier,
 ) {
@@ -115,12 +118,17 @@ fun homeScreen(
         .distinctBy { it.key }
         .take(6)
 
-    LazyColumn(
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = onRefresh,
         modifier = modifier
             .fillMaxSize()
-            .background(ScreenBg),
-        contentPadding = PaddingValues(bottom = 16.dp)
+            .background(ScreenBg)
     ) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = 16.dp)
+        ) {
         // ── Top App Bar ──────────────────────────────────────────
         item {
             Row(
@@ -362,10 +370,13 @@ fun homeScreen(
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(continueWatching, key = { "${it.movie.mediaType}_${it.movie.tmdbID}" }) { item ->
+                    items(continueWatching, key = { it.key }) { item ->
                         continueWatchingCard(
                             item = item,
-                            onClick = { onMovieClicked(item.movie) }
+                            onClick = {
+                                item.movie?.let(onMovieClicked)
+                                    ?: item.anime?.let(onAnimeClicked)
+                            }
                         )
                     }
                 }
@@ -500,6 +511,7 @@ fun homeScreen(
                 }
             }
         }
+        }
     }
 }
 
@@ -533,10 +545,16 @@ private val TmdbMovie.watchlistKey: String
 @Composable
 private fun continueWatchingCard(item: ContinueWatchingItem, onClick: () -> Unit) {
     val movie = item.movie
-    val subtitle = if (movie.isTv && item.season != null && item.episode != null) {
-        "S${item.season} E${item.episode} / ${formatResumeTime(item.positionMs)} watched"
-    } else {
-        "${formatResumeTime(item.positionMs)} watched"
+    val anime = item.anime
+    val title = movie?.displayTitle ?: anime?.name.orEmpty()
+    val imageUrl = movie?.let {
+        (it.backdropPath ?: it.posterPath)?.let { path -> TMDB_IMAGE_W500 + path }
+    } ?: anime?.thumbnail
+    val subtitle = when {
+        anime != null -> "Episode ${item.episode ?: 1}"
+        movie?.isTv == true && item.season != null && item.episode != null ->
+            "S${item.season} E${item.episode} / ${formatResumeTime(item.positionMs)} watched"
+        else -> "${formatResumeTime(item.positionMs)} watched"
     }
 
     Column(
@@ -551,8 +569,8 @@ private fun continueWatchingCard(item: ContinueWatchingItem, onClick: () -> Unit
                 .clip(RoundedCornerShape(12.dp))
         ) {
             AsyncImage(
-                model = TMDB_IMAGE_W500 + (movie.backdropPath ?: movie.posterPath),
-                contentDescription = movie.displayTitle,
+                model = imageUrl,
+                contentDescription = title,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
@@ -590,7 +608,7 @@ private fun continueWatchingCard(item: ContinueWatchingItem, onClick: () -> Unit
         )
         Spacer(Modifier.height(6.dp))
         Text(
-            movie.displayTitle,
+            title,
             color = Color.White,
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium,

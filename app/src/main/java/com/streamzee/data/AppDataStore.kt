@@ -56,6 +56,26 @@ object AppDataStore {
             preferences[WATCH_HISTORY_IDS] = (listOf(mediaKey) + currentIds).take(30).joinToString(",")
         }
     }
+
+    suspend fun saveAnimeWatchProgress(
+        context: Context,
+        animeId: String,
+        episode: Int,
+        positionMs: Long = 0L,
+    ) {
+        val mediaKey = "anime_$animeId"
+        context.dataStore.edit { preferences ->
+            preferences[watchProgressKey(mediaKey)] = positionMs.toString()
+            preferences[lastEpisodeKey(mediaKey)] = episode.toString()
+
+            val currentIds = preferences[WATCH_HISTORY_IDS]
+                ?.split(",")
+                ?.map { it.trim() }
+                ?.filter { it.isNotBlank() && it != mediaKey }
+                ?: emptyList()
+            preferences[WATCH_HISTORY_IDS] = (listOf(mediaKey) + currentIds).take(30).joinToString(",")
+        }
+    }
     
     
     fun apiKeyFlow(context: Context): Flow<String?> =

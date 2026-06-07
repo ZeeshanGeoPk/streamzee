@@ -19,7 +19,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
@@ -29,6 +29,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -54,11 +56,13 @@ private val CardBg = Color(0xFF161622)
 private val TextSecondary = Color(0xFF8E8E9F)
 private val ScreenBg = Color(0xFF050508)
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun homeBrowseScreen(
     browseState: HomeBrowseUiState,
     onBack: () -> Unit,
     onLoadMore: () -> Unit,
+    onRefresh: () -> Unit,
     onMovieClicked: (TmdbMovie) -> Unit,
     onAnimeClicked: (MegaPlayShow) -> Unit,
     modifier: Modifier = Modifier,
@@ -72,17 +76,32 @@ fun homeBrowseScreen(
         }
     }
 
-    LaunchedEffect(shouldLoadMore, browseState.isLoading, browseState.endReached, browseState.errorMessage) {
-        if (shouldLoadMore && !browseState.isLoading && !browseState.endReached && browseState.errorMessage == null) {
+    LaunchedEffect(
+        shouldLoadMore,
+        browseState.isLoading,
+        browseState.isRefreshing,
+        browseState.endReached,
+        browseState.errorMessage,
+    ) {
+        if (
+            shouldLoadMore &&
+            !browseState.isLoading &&
+            !browseState.isRefreshing &&
+            !browseState.endReached &&
+            browseState.errorMessage == null
+        ) {
             onLoadMore()
         }
     }
 
-    Column(
+    PullToRefreshBox(
+        isRefreshing = browseState.isRefreshing,
+        onRefresh = onRefresh,
         modifier = modifier
             .fillMaxSize()
             .background(ScreenBg)
     ) {
+        Column(modifier = Modifier.fillMaxSize()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -90,7 +109,7 @@ fun homeBrowseScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onBack) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
             }
             Text(
                 browseState.section?.title.orEmpty(),
@@ -148,6 +167,7 @@ fun homeBrowseScreen(
                     browseState.endReached -> EndFooter()
                 }
             }
+        }
         }
     }
 }
