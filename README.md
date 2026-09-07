@@ -6,7 +6,7 @@
 
 **Streamzee** is a clean, cinematic, and unified streaming hub for Android. It brings together Movies, TV Series, and Anime into a single, high-performance interface built entirely with Jetpack Compose.
 
-> **Beta Phase Notice:** This application is currently in early beta. For provider-supported streams, start playback and use the player Download button to save movies or episodes offline. The **Profile** tab remains under development.
+> **Beta Phase Notice:** This application is currently in early beta. For provider-supported streams, start playback and use the player Download button to save movies or episodes offline. The **Profile** tab includes appearance, token, cache and watch-history controls.
 
 ---
 
@@ -92,10 +92,10 @@ To maintain a high-quality experience without centralized servers, Streamzee req
 | **Movie/TV Streaming** | ✅ Stable |
 | **Anime Streaming** | ✅ Stable |
 | **Search Functionality** | ✅ Stable |
-| **Watchlist Logic** | ⚠️ UnStable |
+| **Watchlist Logic** | Atomic updates and resilient library refresh |
 | **Bug Fixes (UI/Scaling)** | 🛠 Ongoing |
-| **Downloads Section** | 🚧 Coming Soon |
-| **User Profile/Stats** | 🚧 Coming Soon |
+| **Downloads Section** | Available for provider-supported streams |
+| **User Profile/Stats** | Settings available; viewing statistics planned |
 
 ---
 
@@ -137,3 +137,39 @@ Every contribution, no matter the size, helps keep the project moving forward. T
 ---
 ![License](https://img.shields.io/github/license/ZeeshanGeoPk/streamzee?style=for-the-badge)
 ---
+
+## Recent reliability improvements
+
+- Search runs after a short typing pause and refreshes when switching categories.
+- Watchlist updates are atomic; a failed metadata request no longer clears the entire library.
+- Movie and TV playback progress use separate keys, including migration of existing progress.
+- Profile includes a confirmed action to clear playback history while preserving the watchlist and downloads.
+- TMDB tokens are checked before saving; failed validation preserves the existing token.
+
+Validation commands (with the Android SDK configured):
+
+```sh
+./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebugAndroidTest
+./gradlew :app:connectedDebugAndroidTest
+```
+
+The connected tests require an emulator or Android device and cover watchlist concurrency,
+independent movie/TV progress, and history clearing.
+
+## Offline playback and local files
+
+Completed downloads can be played from the Downloads tab without network access.
+The offline player remembers its position, pauses when the app goes into the background,
+supports 10-second seeking and landscape fullscreen, and reports playback failures.
+
+To access a download outside Streamzee, tap **Save to files** beside a completed download,
+then select a local folder such as **Downloads** in Android's file picker. Streamzee exports
+an MP4 from its offline cache. Open that folder in your Files app to play, copy, or share it.
+Existing completed downloads can also be exported. The exported copy remains when you remove
+the in-app download or uninstall Streamzee.
+
+Keep the Downloads screen open during export; Cancel stops the operation and attempts to remove
+the incomplete output. Export needs temporary free space in addition to the destination file.
+Unsupported codecs or an incomplete cache can prevent export. It exports the selected audio/video
+tracks; separate subtitle tracks are not included. App-private cache fragments remain the source
+for in-app playback; saving a local file creates an independent copy.

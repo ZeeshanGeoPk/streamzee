@@ -251,6 +251,7 @@ fun streamzeeApp(viewModel: MainViewModel) {
                         toggleNotifications = viewModel::toggleNotifications,
                         toggleReducedMotion = viewModel::toggleReducedMotion,
                         clearCache = viewModel::clearAppCache,
+                        clearHistory = viewModel::clearWatchHistory,
                         clearMessage = viewModel::clearSettingsMessage,
                         modifier = contentModifier,
                     )
@@ -373,7 +374,7 @@ fun streamzeeApp(viewModel: MainViewModel) {
                     is Screen.OfflinePlayer -> offlinePlayerScreen(
                         downloadId = screen.downloadId,
                         onBack = goBack,
-                        modifier = contentModifier,
+                        modifier = Modifier.fillMaxSize(),
                     )
                 }
             }

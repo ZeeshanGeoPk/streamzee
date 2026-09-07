@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.async
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
@@ -156,13 +157,9 @@ data class MainUiState(
     val notificationsEnabled: Boolean = true,
     val reducedMotion: Boolean = false,
     val settingsMessage: String? = null,
-    val hoursWatched: Int = 285,
-    val completedAnimeCount: Int = 32,
-    val customCollections: List<CustomCollection> = listOf(
-        CustomCollection("Weekend Movies", 12, "https://image.tmdb.org/t/p/w500/or06vlH62MvjAcZgOI27H14HjK8.jpg"),
-        CustomCollection("Best Action Anime", 25, "https://image.tmdb.org/t/p/w500/1X6v4t7j5j1zQoFhY75kG4Qd81m.jpg"),
-        CustomCollection("Family Watchlist", 18, "https://image.tmdb.org/t/p/w500/jRXYjXN1CYegZJ2gZo58BMj7u0T.jpg")
-    ),
+    val hoursWatched: Int = 0,
+    val completedAnimeCount: Int = 0,
+    val customCollections: List<CustomCollection> = emptyList(),
     val downloadsQueue: List<DownloadItem> = emptyList(),
     val downloadSettings: DownloadSettings = DownloadSettings(),
     val downloadStorage: DownloadStorage = DownloadStorage(),
@@ -186,6 +183,11 @@ private data class HomeContent(
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = StreamzeeRepository(NetworkClient.tmdbApi, application)
     private val downloadManager = StreamDownloadManager.get(application)
+    private var detailsJob: Job? = null
+    private var tokenJob: Job? = null
+    private var searchJob: Job? = null
+    private var libraryJob: Job? = null
+    private var seasonJob: Job? = null
     private var continueWatchingJob: Job? = null
     private var movieWatchProgressJob: Job? = null
     private var animeWatchProgressJob: Job? = null
@@ -194,6 +196,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
 
     private fun navigateTo(screen: Screen, addToBackStack: Boolean = true) {
+        detailsJob?.cancel()
         _uiState.update { state ->
             val nextBackStack = if (
                 addToBackStack &&
@@ -207,6 +210,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
             state.copy(
                 currentScreen = screen,
+                isLoading = false,
                 backStack = nextBackStack,
                 errorMessage = null,
                 currentMovieWatchProgressMs = null,
@@ -216,6 +220,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun navigateBack(): Boolean {
+        detailsJob?.cancel()
+        _uiState.update { it.copy(isLoading = false) }
         val previous = _uiState.value.backStack.lastOrNull() ?: return false
 
         _uiState.update {
@@ -228,16 +234,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         if (previous is Screen.Library) {
-            val ids = _uiState.value.savedIds
-            loadSavedMovies(_uiState.value.apiKey, ids)
-            loadSavedAnime(ids)
+            loadLibrary()
         }
 
         if (previous is Screen.Details) {
             if (previous.movie.isTv) {
                 loadSeason(previous.movie.tmdbID, _uiState.value.lastWatchedSeason ?: 1)
             }
-            loadWatchProgress(previous.movie.tmdbID.toString())
+            loadWatchProgress("${if (previous.movie.isTv) "tv" else "movie"}_${previous.movie.tmdbID}")
         }
 
         if (previous is Screen.AnimeDetails) {
@@ -253,7 +257,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         viewModelScope.launch {
-            repository.apiKeyFlow().collectLatest { apiKey ->
+            repository.apiKeyFlow().distinctUntilChanged().collectLatest { apiKey ->
                 _uiState.update { state ->
                     val screen = if (apiKey.isNullOrBlank()) {
                         Screen.Setup
@@ -272,17 +276,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         viewModelScope.launch {
-            repository.savedIdsFlow().collectLatest { savedIds ->
+            repository.savedIdsFlow().distinctUntilChanged().collectLatest { savedIds ->
                 _uiState.update { state ->
                     state.copy(
-                        savedIds = savedIds,
-                        hoursWatched = 280 + savedIds.size * 5,
-                        completedAnimeCount = 30 + savedIds.size / 2
+                        savedIds = savedIds
                     )
                 }
                 if (_uiState.value.currentScreen is Screen.Library) {
-                    loadSavedMovies(_uiState.value.apiKey, savedIds)
-                    loadSavedAnime(savedIds)
+                    loadLibrary()
                 }
             }
         }
@@ -335,22 +336,26 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun updateSearchQuery(query: String) {
-        _uiState.update { it.copy(searchQuery = query) }
-    }
-
-    fun updateSearchMode(mode: SearchMode) {
-        _uiState.update {
-            it.copy(
-                searchMode = mode,
-                errorMessage = null,
-                searchResults = if (mode == SearchMode.ANIME) emptyList() else it.searchResults,
-                animeSearchResults = if (mode == SearchMode.ANIME) it.animeSearchResults else emptyList(),
-            )
+        searchJob?.cancel()
+        _uiState.update { it.copy(searchQuery = query, searchResults = emptyList(),
+            animeSearchResults = emptyList(), isSearching = false, errorMessage = null) }
+        searchJob = viewModelScope.launch {
+            delay(400)
+            search(query)
         }
     }
 
+    fun updateSearchMode(mode: SearchMode) {
+        if (mode == _uiState.value.searchMode) return
+        searchJob?.cancel()
+        _uiState.update { it.copy(searchMode = mode, searchResults = emptyList(),
+            animeSearchResults = emptyList(), isSearching = false, errorMessage = null) }
+        search(_uiState.value.searchQuery)
+    }
+
     fun search(query: String) {
-        viewModelScope.launch {
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
             val mode = _uiState.value.searchMode
             val trimmedQuery = query.trim()
             val apiKey = _uiState.value.apiKey
@@ -413,6 +418,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
             } catch (exception: Exception) {
+                if (exception is CancellationException) throw exception
                 _uiState.update {
                     it.copy(
                         searchResults = emptyList(),
@@ -426,21 +432,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun saveApiKey(apiKey: String) {
-        viewModelScope.launch {
+        tokenJob?.cancel()
+        tokenJob = viewModelScope.launch {
             if (apiKey.isBlank()) {
                 _uiState.update { it.copy(errorMessage = "Please enter a valid TMDB token.") }
                 return@launch
             }
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             try {
-                repository.saveApiKey(apiKey)
+                repository.fetchTrendingMovies(apiKey.trim())
+                repository.saveApiKey(apiKey.trim())
                 _uiState.update { it.copy(isLoading = false, currentScreen = Screen.Home, backStack = emptyList()) }
-                loadHomeContent(apiKey)
             } catch (exception: Exception) {
+                if (exception is CancellationException) throw exception
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        errorMessage = "Failed to save API key: ${exception.message ?: "unexpected error"}",
+                        errorMessage = "Unable to verify or save TMDB token: ${exception.message ?: "unexpected error"}",
                     )
                 }
             }
@@ -498,6 +506,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     )
                 }
             } catch (exception: Exception) {
+                if (exception is CancellationException) throw exception
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -633,6 +642,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
             } catch (exception: Exception) {
+                if (exception is CancellationException) throw exception
                 _uiState.update {
                     it.copy(
                         homeBrowse = it.homeBrowse.copy(
@@ -705,7 +715,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     } else {
                         repository.getMovieDetails(apiKey, id).copy(mediaType = "movie")
                     }
-                    val (positionMs, season, episode) = repository.watchProgressFlow(id).first()
+                    val (positionMs, season, episode) = repository.watchProgressFlow(mediaKey).first()
                     ContinueWatchingItem(
                         movie = movie,
                         progress = estimateWatchProgress(positionMs, isTv),
@@ -772,52 +782,45 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun openLibrary() {
-        val ids = _uiState.value.savedIds
         navigateTo(Screen.Library)
-        loadSavedMovies(_uiState.value.apiKey, ids)
-        loadSavedAnime(ids) // Added this line
+        loadLibrary()
     }
 
-    fun refreshLibrary() {
-        val state = _uiState.value
-        if (state.isRefreshingLibrary) return
+    fun refreshLibrary() = loadLibrary(isRefresh = true)
 
-        viewModelScope.launch {
-            _uiState.update { it.copy(isRefreshingLibrary = true, errorMessage = null) }
-
-            val apiKey = _uiState.value.apiKey
-            val savedIds = _uiState.value.savedIds
-
-            val movies = savedIds.mapNotNull { mediaKey ->
-                if (!mediaKey.startsWith("movie_") && !mediaKey.startsWith("tv_")) {
-                    return@mapNotNull null
-                }
-                if (apiKey.isNullOrBlank()) return@mapNotNull null
-
-                val id = mediaKey.substringAfter("_")
-                runCatching {
-                    if (mediaKey.startsWith("tv_")) {
-                        repository.getTvShowDetails(apiKey, id).copy(mediaType = "tv")
-                    } else {
-                        repository.getMovieDetails(apiKey, id).copy(mediaType = "movie")
+    private fun loadLibrary(isRefresh: Boolean = false) {
+        libraryJob?.cancel()
+        libraryJob = viewModelScope.launch {
+            val state = _uiState.value
+            val ids = state.savedIds
+            _uiState.update { it.copy(isLoadingSaved = true,
+                isRefreshingLibrary = isRefresh, errorMessage = null) }
+            var failures = 0
+            val movies = mutableListOf<TmdbMovie>()
+            val anime = mutableListOf<JikanAnime>()
+            for (key in ids) {
+                try {
+                    when {
+                        key.startsWith("movie_") -> movies += repository.getMovieDetails(
+                            requireNotNull(state.apiKey), key.removePrefix("movie_"))
+                        key.startsWith("tv_") -> movies += repository.getTvShowDetails(
+                            requireNotNull(state.apiKey), key.removePrefix("tv_"))
+                        key.startsWith("anime_") -> anime += repository.getAnimeById(
+                            key.removePrefix("anime_").toInt())
                     }
-                }.getOrNull()
+                } catch (exception: Exception) {
+                    if (exception is CancellationException) throw exception
+                    failures++
+                    state.savedMovies.firstOrNull {
+                        "${if (it.isTv) "tv" else "movie"}_${it.tmdbID}" == key
+                    }?.let { movies += it }
+                    state.savedAnime.firstOrNull { "anime_${it.malId}" == key }
+                        ?.let { anime += it }
+                }
             }
-
-            val anime = savedIds.mapNotNull { mediaKey ->
-                if (!mediaKey.startsWith("anime_")) return@mapNotNull null
-                runCatching {
-                    repository.getAnimeById(mediaKey.removePrefix("anime_").toInt())
-                }.getOrNull()
-            }
-
-            _uiState.update {
-                it.copy(
-                    savedMovies = movies,
-                    savedAnime = anime,
-                    isRefreshingLibrary = false,
-                )
-            }
+            _uiState.update { it.copy(savedMovies = movies, savedAnime = anime,
+                isLoadingSaved = false, isRefreshingLibrary = false,
+                errorMessage = if (failures > 0) "Unable to refresh $failures saved titles. Pull to refresh to retry." else null) }
         }
     }
 
@@ -942,9 +945,29 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
 
+        tokenJob?.cancel()
+        tokenJob = viewModelScope.launch {
+            try {
+                repository.fetchTrendingMovies(apiKey.trim())
+                repository.saveApiKey(apiKey.trim())
+                _uiState.update { it.copy(settingsMessage = "TMDB token updated.") }
+            } catch (exception: Exception) {
+                if (exception is CancellationException) throw exception
+                _uiState.update { it.copy(settingsMessage = "Unable to verify TMDB token. Check the token and your connection.") }
+            }
+        }
+    }
+
+    fun clearWatchHistory() {
         viewModelScope.launch {
-            repository.saveApiKey(apiKey)
-            _uiState.update { it.copy(settingsMessage = "TMDB token updated.") }
+            try {
+                repository.clearWatchHistory()
+                _uiState.update { it.copy(continueWatching = emptyList(),
+                    settingsMessage = "Watch history cleared.") }
+            } catch (exception: Exception) {
+                if (exception is CancellationException) throw exception
+                _uiState.update { it.copy(settingsMessage = "Unable to clear watch history.") }
+            }
         }
     }
 
@@ -968,7 +991,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun openDetails(movie: TmdbMovie) {
-        viewModelScope.launch {
+        movieWatchProgressJob?.cancel()
+        animeWatchProgressJob?.cancel()
+        seasonJob?.cancel()
+        detailsJob?.cancel()
+        detailsJob = viewModelScope.launch {
             val apiKey = _uiState.value.apiKey ?: return@launch
             val previousScreen = _uiState.value.currentScreen
             _uiState.update { it.copy(isLoading = true) }
@@ -999,9 +1026,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 
                 if (fullMovie.isTv) loadSeason(fullMovie.tmdbID, 1)
-                loadWatchProgress(fullMovie.tmdbID.toString())
+                loadWatchProgress("${if (fullMovie.isTv) "tv" else "movie"}_${fullMovie.tmdbID}")
                 
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 _uiState.update { it.copy(isLoading = false, errorMessage = e.message) }
             }
         }
@@ -1056,12 +1084,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     
     
     fun loadSeason(tvId: Long, seasonNumber: Int) {
-        viewModelScope.launch {
+        seasonJob?.cancel()
+        _uiState.update { it.copy(currentSeasonEpisodes = emptyList()) }
+        seasonJob = viewModelScope.launch {
             try {
                 val apiKey = _uiState.value.apiKey ?: return@launch
                 val response = repository.fetchTvSeason(apiKey, tvId, seasonNumber)
                 _uiState.update { it.copy(currentSeasonEpisodes = response.episodes) }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 _uiState.update { it.copy(errorMessage = e.message) }
             }
         }
@@ -1121,6 +1152,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     _uiState.update { it.copy(subtitleSearchResults = emptyList(), isSearchingSubtitles = false, subtitleErrorMessage = res.error) }
                 }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 _uiState.update { it.copy(subtitleSearchResults = emptyList(), isSearchingSubtitles = false, subtitleErrorMessage = e.message) }
             }
         }
@@ -1135,90 +1167,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun loadSavedMovies(apiKey: String?, savedIds: Set<String>) {
-
-        if (apiKey.isNullOrBlank() || savedIds.isEmpty()) {
-            _uiState.update {
-                it.copy(
-                    savedMovies = emptyList(),
-                    isLoadingSaved = false
-                )
-            }
-            return
-        }
-
-        viewModelScope.launch {
-
-            _uiState.update {
-                it.copy(isLoadingSaved = true, errorMessage = null)
-            }
-
-            try {
-
-                val results = savedIds.mapNotNull { prefixedId ->
-                    if (!prefixedId.startsWith("movie_") && !prefixedId.startsWith("tv_")) return@mapNotNull null
-                    
-                    val id = prefixedId.split("_")[1]
-                        if (prefixedId.startsWith("tv_")) {
-                            // Explicitly set mediaType to "tv"
-                            repository.getTvShowDetails(apiKey, id).copy(mediaType = "tv")
-                        } else {
-                            // Explicitly set mediaType to "movie"
-                            repository.getMovieDetails(apiKey, id).copy(mediaType = "movie")
-                        }
-        }
-            _uiState.update { it.copy(savedMovies = results, isLoadingSaved = false) 
-            
-            }
-
-            } catch (exception: Exception) {
-
-                _uiState.update {
-                    it.copy(
-                        savedMovies = emptyList(),
-                        isLoadingSaved = false,
-                        errorMessage =
-                            "Unable to load saved library: ${
-                                exception.message ?: "network error"
-                            }"
-                    )
-                }
-            }
-        }
-    }
-
-    
-    private fun loadSavedAnime(savedIds: Set<String>) {
-
-        val animeIds = savedIds
-            .filter { it.startsWith("anime_") }
-            .map { it.removePrefix("anime_") }
-
-        if (animeIds.isEmpty()) {
-            _uiState.update { it.copy(savedAnime = emptyList()) }
-            return
-        }
-
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoadingSaved = true) }
-
-            val animeList = animeIds.mapNotNull { id ->
-                try {
-                    repository.getAnimeById(id.toInt()) // Jikan call
-                } catch (e: Exception) {
-                    null
-                }
-            }
-
-            _uiState.update {
-                it.copy(
-                    savedAnime = animeList,
-                    isLoadingSaved = false
-                )
-            }
-        }
-    }    
-    
     private fun loadWatchProgress(movieId: String) {
         movieWatchProgressJob?.cancel()
         movieWatchProgressJob = viewModelScope.launch {

@@ -368,6 +368,7 @@ class StreamDownloadManager private constructor(context: Context) {
     }
 
     fun remove(id: String) {
+        preferences.edit().remove("offline_position_$id").apply()
         val hasResolvedDownload = synchronized(this) {
             catalog.firstOrNull { it.id == id }?.resolvedUrl != null
         }
@@ -399,6 +400,14 @@ class StreamDownloadManager private constructor(context: Context) {
         applySettings(sanitized)
     }
 
+    fun offlineDataSourceFactory(): CacheDataSource.Factory = createOfflineDataSourceFactory(cache)
+
+    fun offlinePosition(id: String): Long = preferences.getLong("offline_position_$id", 0L)
+
+    fun saveOfflinePosition(id: String, positionMs: Long) {
+        preferences.edit().putLong("offline_position_$id", positionMs.coerceAtLeast(0L)).apply()
+    }
+
     fun createOfflinePlayer(context: Context, id: String): ExoPlayer? {
         val item = _downloads.value.firstOrNull {
             it.id == id && it.status == DownloadStatus.COMPLETED
@@ -410,13 +419,17 @@ class StreamDownloadManager private constructor(context: Context) {
             .setUri(url)
             .setMimeType(item.mimeType)
             .build()
-        val mediaSourceFactory = DefaultMediaSourceFactory(cacheDataSourceFactory)
+        val mediaSourceFactory = DefaultMediaSourceFactory(offlineDataSourceFactory())
         return ExoPlayer.Builder(
             context,
             DefaultRenderersFactory(context),
             mediaSourceFactory,
-        ).build().apply {
-            setMediaItem(mediaItem)
+        ).setSeekBackIncrementMs(10_000L)
+            .setSeekForwardIncrementMs(10_000L)
+            .build().apply {
+            setAudioAttributes(androidx.media3.common.AudioAttributes.DEFAULT, true)
+            setHandleAudioBecomingNoisy(true)
+            setMediaItem(mediaItem, offlinePosition(id))
             prepare()
             playWhenReady = true
         }
@@ -579,6 +592,10 @@ class StreamDownloadManager private constructor(context: Context) {
                 response.body?.string().orEmpty()
             }
             if (!body.contains("#EXT-X-STREAM-INF")) return@runCatching masterUrl
+            // Selecting only a video variant loses separately declared audio/subtitle renditions.
+            if (body.lineSequence().any { it.trim().startsWith("#EXT-X-MEDIA:") }) {
+                return@runCatching masterUrl
+            }
 
             val lines = body.lineSequence().map(String::trim).toList()
             val variants = buildList {

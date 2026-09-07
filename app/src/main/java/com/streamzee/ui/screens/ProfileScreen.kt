@@ -89,9 +89,11 @@ fun profileScreen(
     toggleNotifications: () -> Unit,
     toggleReducedMotion: () -> Unit,
     clearCache: () -> Unit,
+    clearHistory: () -> Unit,
     clearMessage: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var showClearHistoryDialog by remember { mutableStateOf(false) }
     var showApiKeyDialog by remember { mutableStateOf(false) }
     var showClearCacheDialog by remember { mutableStateOf(false) }
     var showQualityDialog by remember { mutableStateOf(false) }
@@ -236,6 +238,13 @@ fun profileScreen(
             item {
                 SettingsSection(title = "Data") {
                     ClickableSettingsRow(
+                        icon = Icons.Default.CleaningServices,
+                        title = "Clear watch history",
+                        value = "Remove playback progress and Continue Watching",
+                        onClick = { showClearHistoryDialog = true },
+                    )
+                    SettingsDivider()
+                    ClickableSettingsRow(
                         icon = Icons.Default.Key,
                         title = "TMDB API token",
                         value = maskApiKey(uiState.apiKey),
@@ -271,6 +280,23 @@ fun profileScreen(
             onSave = {
                 updateApiKey(it)
                 showApiKeyDialog = false
+            },
+        )
+    }
+
+    if (showClearHistoryDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearHistoryDialog = false },
+            title = { Text("Clear watch history?") },
+            text = { Text("Playback progress and Continue Watching will be removed. Your watchlist and downloads will stay.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    clearHistory()
+                    showClearHistoryDialog = false
+                }) { Text("Clear") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearHistoryDialog = false }) { Text("Cancel") }
             },
         )
     }

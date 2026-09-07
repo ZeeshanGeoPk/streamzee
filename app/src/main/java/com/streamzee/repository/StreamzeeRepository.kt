@@ -58,17 +58,13 @@ class StreamzeeRepository(
         AppDataStore.saveReducedMotion(context, enabled)
 
     suspend fun clearCache(): Boolean = withContext(Dispatchers.IO) {
-        context.cacheDir.listFiles()?.all { it.deleteRecursively() } ?: true
+        context.cacheDir.listFiles()?.map { it.deleteRecursively() }?.all { it } ?: true
     }
 
+    suspend fun clearWatchHistory() = AppDataStore.clearWatchHistory(context)
+
     suspend fun toggleSaved(id: String) {
-        val current = AppDataStore.savedIdsFlow(context).first().toMutableSet()
-
-        if (!current.add(id)) {
-            current.remove(id)
-        }
-
-        AppDataStore.setSavedIds(context, current)
+        AppDataStore.toggleSaved(context, id)
     }
 
     suspend fun fetchTrending(apiKey: String): List<TmdbMovie> {
@@ -112,21 +108,21 @@ class StreamzeeRepository(
     }
 
     suspend fun searchMovies(apiKey: String, query: String): List<TmdbMovie> {
-        return api.searchMovies("Bearer $apiKey", query.trim()).results
+        return api.searchMovies("Bearer $apiKey", query.trim()).results.asMovies()
     }
 
     suspend fun searchTv(apiKey: String, query: String): List<TmdbMovie> {
-        return api.searchTv("Bearer $apiKey", query.trim()).results
+        return api.searchTv("Bearer $apiKey", query.trim()).results.asTvShows()
     }
 
     suspend fun getMovieDetails(apiKey: String, movieId: String): TmdbMovie {
         val id = movieId.toLongOrNull() ?: throw IllegalArgumentException("Invalid movie ID: $movieId")
-        return api.getMovieDetails("Bearer $apiKey", id)
+        return api.getMovieDetails("Bearer $apiKey", id).copy(mediaType = "movie")
     }
     
     suspend fun getTvShowDetails(apiKey: String, tvId: String): TmdbMovie {
     val id = tvId.toLongOrNull() ?: throw IllegalArgumentException("Invalid TV ID: $tvId")
-    return api.getTvShowDetails("Bearer $apiKey", id)
+    return api.getTvShowDetails("Bearer $apiKey", id).copy(mediaType = "tv")
     }
 
     suspend fun fetchTvSeason(apiKey: String, tvId: Long, seasonNumber: Int): TmdbSeasonResponse {

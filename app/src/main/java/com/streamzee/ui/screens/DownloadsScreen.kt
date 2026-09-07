@@ -49,6 +49,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.platform.LocalContext
+import com.streamzee.data.exportOfflineVideo
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -89,6 +96,52 @@ fun downloadsScreen(
     onPlay: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
+    val exportScope = rememberCoroutineScope()
+    var pendingExportId by rememberSaveable { mutableStateOf<String?>(null) }
+    var exporting by remember { mutableStateOf(false) }
+    var exportJob by remember { mutableStateOf<Job?>(null) }
+    var exportMessage by remember { mutableStateOf<String?>(null) }
+    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("video/mp4")) { uri ->
+        val item = uiState.downloadsQueue.firstOrNull { it.id == pendingExportId }
+        pendingExportId = null
+        if (uri != null && item != null) {
+            exporting = true
+            exportJob = exportScope.launch {
+                try {
+                    exportOfflineVideo(context, item, uri)
+                    exportMessage = "Video saved. Open the folder you selected in your Files app to play or share it."
+                } catch (exception: Exception) {
+                    if (exception is CancellationException) throw exception
+                    exportMessage = "Could not save this video. Check available space and that the download plays offline."
+                } finally {
+                    exporting = false
+                }
+            }
+        }
+    }
+    val saveToFiles: (String) -> Unit = { id ->
+        if (!exporting && pendingExportId == null) {
+            uiState.downloadsQueue.firstOrNull { it.id == id }?.let { item ->
+                pendingExportId = id
+                val name = "${item.title} - ${item.subtitle}".replace(Regex("[^\\p{L}\\p{N} ._-]"), "_").take(100)
+                exportLauncher.launch("$name.mp4")
+            }
+        }
+    }
+    if (exporting) AlertDialog(
+        onDismissRequest = {},
+        title = { Text("Saving video") },
+        text = { Column { CircularProgressIndicator(); Text("Keep this screen open while your offline video is saved.") } },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = { exportJob?.cancel() }) { Text("Cancel") } },
+    )
+    exportMessage?.let { message -> AlertDialog(
+        onDismissRequest = { exportMessage = null },
+        title = { Text("Save to files") },
+        text = { Text(message) },
+        confirmButton = { TextButton(onClick = { exportMessage = null }) { Text("OK") } },
+    ) }
     var selectedFilter by remember { mutableStateOf(DownloadFilter.ALL) }
     var showSettings by remember { mutableStateOf(false) }
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -243,6 +296,7 @@ fun downloadsScreen(
                 onRetry = onRetry,
                 onRemove = onRemove,
                 onPlay = onPlay,
+                onExport = saveToFiles,
             )
             downloadGroup(
                 title = "Paused",
@@ -252,6 +306,7 @@ fun downloadsScreen(
                 onRetry = onRetry,
                 onRemove = onRemove,
                 onPlay = onPlay,
+                onExport = saveToFiles,
             )
             downloadGroup(
                 title = "Completed",
@@ -261,6 +316,7 @@ fun downloadsScreen(
                 onRetry = onRetry,
                 onRemove = onRemove,
                 onPlay = onPlay,
+                onExport = saveToFiles,
             )
             downloadGroup(
                 title = "Needs attention",
@@ -270,6 +326,7 @@ fun downloadsScreen(
                 onRetry = onRetry,
                 onRemove = onRemove,
                 onPlay = onPlay,
+                onExport = saveToFiles,
             )
         }
 
@@ -286,6 +343,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.downloadGroup(
     onRetry: (String) -> Unit,
     onRemove: (String) -> Unit,
     onPlay: (String) -> Unit,
+    onExport: (String) -> Unit,
 ) {
     if (items.isEmpty()) return
     item {
@@ -305,6 +363,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.downloadGroup(
             onRetry = { onRetry(item.id) },
             onRemove = { onRemove(item.id) },
             onPlay = { onPlay(item.id) },
+            onExport = { onExport(item.id) },
         )
     }
 }
@@ -317,6 +376,7 @@ private fun downloadCard(
     onRetry: () -> Unit,
     onRemove: () -> Unit,
     onPlay: () -> Unit,
+    onExport: () -> Unit,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -413,6 +473,9 @@ private fun downloadCard(
                     }
                     DownloadStatus.RESOLVING,
                     DownloadStatus.REMOVING -> Unit
+                }
+                if (item.status == DownloadStatus.COMPLETED) {
+                    TextButton(onClick = onExport) { Text("Save to files") }
                 }
                 Spacer(Modifier.width(4.dp))
                 IconButton(onClick = onRemove) {

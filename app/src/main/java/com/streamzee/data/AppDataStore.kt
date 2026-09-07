@@ -43,9 +43,17 @@ object AppDataStore {
     // Update watchProgressFlow to return a Triple (Position, Season, Episode)
     fun watchHistoryFlow(context: Context, movieId: String): Flow<Triple<Long, Int, Int>> =
         context.dataStore.data.map { preferences ->
-            val pos = preferences[watchProgressKey(movieId)]?.toLongOrNull() ?: 0L
-            val season = preferences[lastSeasonKey(movieId)]?.toIntOrNull() ?: 1
-            val episode = preferences[lastEpisodeKey(movieId)]?.toIntOrNull() ?: 1
+            // Older versions stored movie and TV progress under the bare TMDB ID.
+            // Only inherit it for the media type most recently watched with that ID.
+            val legacyId = movieId.substringAfter("_")
+            val legacyOwner = preferences[WATCH_HISTORY_IDS]?.split(",")?.firstOrNull {
+                it == "movie_$legacyId" || it == "tv_$legacyId"
+            }
+            val fallbackId = if (legacyOwner == movieId) legacyId else movieId
+            val pos = (preferences[watchProgressKey(movieId)]
+                ?: preferences[watchProgressKey(fallbackId)])?.toLongOrNull() ?: 0L
+            val season = (preferences[lastSeasonKey(movieId)] ?: preferences[lastSeasonKey(fallbackId)])?.toIntOrNull() ?: 1
+            val episode = (preferences[lastEpisodeKey(movieId)] ?: preferences[lastEpisodeKey(fallbackId)])?.toIntOrNull() ?: 1
             Triple(pos, season, episode)
         }
 
@@ -61,11 +69,22 @@ object AppDataStore {
     // Update save function to include Season and Episode
     suspend fun saveWatchProgress(context: Context, movieId: String, positionMs: Long, season: Int? = null, episode: Int? = null) {
         context.dataStore.edit { preferences ->
-            preferences[watchProgressKey(movieId)] = positionMs.toString()
-            season?.let { preferences[lastSeasonKey(movieId)] = it.toString() }
-            episode?.let { preferences[lastEpisodeKey(movieId)] = it.toString() }
-
+            val legacyOwner = preferences[WATCH_HISTORY_IDS]?.split(",")?.firstOrNull {
+                it == "movie_$movieId" || it == "tv_$movieId"
+            }
+            if (legacyOwner != null) {
+                listOf(::watchProgressKey, ::lastSeasonKey, ::lastEpisodeKey).forEach { key ->
+                    preferences[key(movieId)]?.let { value ->
+                        if (preferences[key(legacyOwner)] == null) preferences[key(legacyOwner)] = value
+                        preferences.remove(key(movieId))
+                    }
+                }
+            }
             val mediaKey = if (season != null || episode != null) "tv_$movieId" else "movie_$movieId"
+            preferences[watchProgressKey(mediaKey)] = positionMs.coerceAtLeast(0L).toString()
+            season?.let { preferences[lastSeasonKey(mediaKey)] = it.toString() }
+            episode?.let { preferences[lastEpisodeKey(mediaKey)] = it.toString() }
+
             val currentIds = preferences[WATCH_HISTORY_IDS]
                 ?.split(",")
                 ?.map { it.trim() }
@@ -148,6 +167,24 @@ object AppDataStore {
 
     fun savedIdsFlow(context: Context): Flow<Set<String>> =
         context.dataStore.data.map { preferences: Preferences -> preferences[SAVED_IDS] ?: emptySet() }
+
+    suspend fun clearWatchHistory(context: Context) {
+        context.dataStore.edit { preferences ->
+            preferences.asMap().keys.filter {
+                it.name.startsWith("watch_progress_") ||
+                    it.name.startsWith("last_season_") || it.name.startsWith("last_episode_")
+            }.forEach { preferences.remove(it) }
+            preferences.remove(WATCH_HISTORY_IDS)
+        }
+    }
+
+    suspend fun toggleSaved(context: Context, id: String) {
+        context.dataStore.edit { preferences ->
+            val ids = preferences[SAVED_IDS].orEmpty().toMutableSet()
+            if (!ids.add(id)) ids.remove(id)
+            preferences[SAVED_IDS] = ids
+        }
+    }
 
     suspend fun setSavedIds(context: Context, ids: Set<String>) {
         context.dataStore.edit { preferences: MutablePreferences ->
