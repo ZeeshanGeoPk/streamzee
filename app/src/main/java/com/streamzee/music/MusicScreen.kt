@@ -12,6 +12,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
+import androidx.compose.material.icons.automirrored.filled.PlaylistPlay
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
@@ -95,10 +97,14 @@ private fun togglePlayback(controller: MediaController) {
 }
 
 @Composable
-fun MusicScreen(controller: MediaController?, modifier: Modifier = Modifier) {
+fun MusicScreen(controller: MediaController?, modifier: Modifier = Modifier,
+    section: String = "Home", onSectionChanged: (String) -> Unit = {}) {
     val context = LocalContext.current
     val library = remember { MusicLibrary.get(context) }
     val libraryState by library.state.collectAsState()
+    LaunchedEffect(section, libraryState.favorites, libraryState.recent, libraryState.playlists, libraryState.hiddenRecommendations) {
+        if (section == "Home") library.refreshRecommendations()
+    }
     val playbackError by MusicStatus.error.collectAsState()
     val cacheBytes by MusicStatus.cachedBytes.collectAsState()
     var showLicenses by remember { mutableStateOf(false) }
@@ -106,7 +112,16 @@ fun MusicScreen(controller: MediaController?, modifier: Modifier = Modifier) {
     val sleepUntil by MusicStatus.sleepUntil.collectAsState()
     val scope = rememberCoroutineScope()
     var query by rememberSaveable { mutableStateOf("") }
-    var tab by rememberSaveable { mutableStateOf("Search") }
+    val tab = section
+    var libraryFilter by rememberSaveable { mutableStateOf("Playlists") }
+    var selectedPlaylist by rememberSaveable { mutableStateOf<String?>(null) }
+    var playlistEditor by remember { mutableStateOf(false) }
+    var renamingPlaylist by remember { mutableStateOf<String?>(null) }
+    var playlistName by remember { mutableStateOf("") }
+    var addTrack by remember { mutableStateOf<MusicTrack?>(null) }
+    var deletePlaylist by remember { mutableStateOf<String?>(null) }
+    val playlist = libraryState.playlists.firstOrNull { it.id == selectedPlaylist }
+    LaunchedEffect(section) { if (section != "Library") selectedPlaylist = null }
     var results by remember { mutableStateOf(emptyList<MusicTrack>()) }
     var searching by remember { mutableStateOf(false) }
     var searchError by remember { mutableStateOf<String?>(null) }
@@ -173,6 +188,35 @@ fun MusicScreen(controller: MediaController?, modifier: Modifier = Modifier) {
         text = { Text(licenseText, Modifier.heightIn(max = 400.dp).verticalScroll(rememberScrollState())) },
         confirmButton = { TextButton(onClick = { showLicenses = false }) { Text("Close") } },
     )
+    if (playlistEditor) AlertDialog(
+        onDismissRequest = { playlistEditor = false },
+        title = { Text(if (renamingPlaylist == null) "New playlist" else "Rename playlist") },
+        text = { OutlinedTextField(playlistName, { playlistName = it.take(60) }, singleLine = true, label = { Text("Playlist name") }) },
+        confirmButton = { TextButton(enabled = playlistName.isNotBlank(), onClick = {
+            val id = renamingPlaylist
+            if (id != null) library.renamePlaylist(id, playlistName) else {
+                library.createPlaylist(playlistName)?.let { newId ->
+                    addTrack?.let { library.addToPlaylist(newId, it); addTrack = null }
+                }
+            }
+            playlistEditor = false
+        }) { Text("Save") } },
+        dismissButton = { TextButton(onClick = { playlistEditor = false }) { Text("Cancel") } },
+    )
+    if (addTrack != null && !playlistEditor) AlertDialog(
+        onDismissRequest = { addTrack = null }, title = { Text("Add to playlist") },
+        text = { LazyColumn { items(libraryState.playlists, key = { it.id }) { item ->
+            TextButton(onClick = { addTrack?.let { library.addToPlaylist(item.id, it) }; addTrack = null }) { Text(item.name) }
+        } } },
+        confirmButton = { TextButton(onClick = { playlistName = ""; renamingPlaylist = null; playlistEditor = true }) { Text("New playlist") } },
+        dismissButton = { TextButton(onClick = { addTrack = null }) { Text("Cancel") } },
+    )
+    deletePlaylist?.let { id -> AlertDialog(
+        onDismissRequest = { deletePlaylist = null }, title = { Text("Delete playlist?") },
+        text = { Text("Your downloaded songs and favorites will stay.") },
+        confirmButton = { TextButton(onClick = { library.deletePlaylist(id); selectedPlaylist = null; deletePlaylist = null }) { Text("Delete") } },
+        dismissButton = { TextButton(onClick = { deletePlaylist = null }) { Text("Cancel") } },
+    ) }
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(libraryState.message) { libraryState.message?.let { snackbar.showSnackbar(it); library.message(null) } }
     fun play(track: MusicTrack) {
@@ -184,10 +228,10 @@ fun MusicScreen(controller: MediaController?, modifier: Modifier = Modifier) {
     Scaffold(modifier = modifier, snackbarHost = { SnackbarHost(snackbar) }, contentWindowInsets = WindowInsets(0)) { padding ->
         LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
-                Text("Music", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+                Text(if (tab == "Home") "Your music" else tab, style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
                 Text("Your soundtrack, anywhere", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            if (current != null && controller != null) item {
+            if (current != null && controller != null && (tab == "Now playing" || tab == "Home")) item {
                 Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
                     Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -197,6 +241,17 @@ fun MusicScreen(controller: MediaController?, modifier: Modifier = Modifier) {
                                 Text(current.mediaMetadata.artist?.toString().orEmpty(), style = MaterialTheme.typography.bodySmall)
                                 if (controller.playbackState == Player.STATE_BUFFERING) Text("Loading audio…", style = MaterialTheme.typography.labelSmall)
                             }
+                        }
+                        val nowTrack = MusicTrack(current.mediaId, current.mediaMetadata.title.toString(),
+                            current.mediaMetadata.artist.toString(), current.mediaMetadata.artworkUri?.toString(),
+                            controller.duration.coerceAtLeast(0) / 1000)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                            IconToggleButton(libraryState.favorites.any { it.id == nowTrack.id }, { library.favorite(nowTrack) }) {
+                                Icon(if (libraryState.favorites.any { it.id == nowTrack.id }) Icons.Default.Favorite else Icons.Default.FavoriteBorder, "Like current song")
+                            }
+                            IconButton(onClick = { addTrack = nowTrack }) { Icon(Icons.AutoMirrored.Filled.PlaylistAdd, "Add current song to playlist") }
+                            IconButton(onClick = { library.download(nowTrack) }, enabled = libraryState.downloads.none { it.track.id == nowTrack.id }) { Icon(Icons.Default.Download, "Download current song") }
+                            TextButton(onClick = { onSectionChanged("Queue") }) { Text("Queue") }
                         }
                         val duration = controller.duration.coerceAtLeast(1L)
                         Slider(value = sliderPosition ?: controller.currentPosition.toFloat().coerceIn(0f, duration.toFloat()),
@@ -230,9 +285,95 @@ fun MusicScreen(controller: MediaController?, modifier: Modifier = Modifier) {
                 }
             }
             playbackError?.let { message -> item { Text(message, color = MaterialTheme.colorScheme.error) } }
-            item { LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(listOf("Search", "Favorites", "Downloads", "Queue")) { name -> FilterChip(tab == name, { tab = name }, { Text(name) }) }
-            } }
+            if (tab == "Now playing" && current == null) item {
+                Text("Your next favorite is waiting.")
+                Button(onClick = { onSectionChanged("Search") }) { Text("Find music") }
+            }
+            if (tab == "Home") {
+                item { Text("Find your mood", style = MaterialTheme.typography.titleLarge) }
+                item { LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(listOf("Chill", "Workout", "Focus", "Jazz", "Classical", "Pop")) { mood ->
+                        SuggestionChip(onClick = { query = "$mood music"; onSectionChanged("Search") }, label = { Text(mood) })
+                    }
+                } }
+                item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        ElevatedCard(onClick = { libraryFilter = "Favorites"; onSectionChanged("Library") }, modifier = Modifier.weight(1f)) {
+                            Column(Modifier.padding(16.dp)) { Icon(Icons.Default.Favorite, null); Text("Liked songs"); Text("${libraryState.favorites.size} songs") }
+                        }
+                        ElevatedCard(onClick = { onSectionChanged("Downloads") }, modifier = Modifier.weight(1f)) {
+                            Column(Modifier.padding(16.dp)) { Icon(Icons.Default.Download, null); Text("Offline music"); Text("${libraryState.downloads.size} songs") }
+                        }
+                    }
+                }
+                item {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text("Made for you", Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
+                        TextButton(enabled = !libraryState.isLoadingRecommendations, onClick = { library.refreshRecommendations(force = true) }) { Text("Refresh") }
+                    }
+                    Text("Based on your liked songs, recent listening and playlists", style = MaterialTheme.typography.bodySmall)
+                    if (libraryState.isLoadingRecommendations) LinearProgressIndicator(Modifier.fillMaxWidth())
+                    libraryState.recommendationError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                    if (!libraryState.isLoadingRecommendations && libraryState.recommendations.isEmpty()) {
+                        Text(if (recommendationSeeds(libraryState).isEmpty()) "Like or play some songs to get personalized picks."
+                            else "No new picks yet. Try another artist or refresh.", Modifier.padding(vertical = 8.dp))
+                    }
+                }
+                if (libraryState.recommendations.isNotEmpty()) item {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        items(libraryState.recommendations, key = { it.track.id }) { recommendation ->
+                            val track = recommendation.track
+                            ElevatedCard(Modifier.width(220.dp)) {
+                                Column(Modifier.clickable { play(track) }.padding(12.dp)) {
+                                    AsyncImage(track.artwork, null, Modifier.fillMaxWidth().height(140.dp), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+                                    Text(track.title, maxLines = 2, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.SemiBold)
+                                    Text(track.artist, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(recommendation.reason, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                }
+                                Row {
+                                    IconButton(onClick = { library.favorite(track) }) { Icon(Icons.Default.FavoriteBorder, "Like recommendation") }
+                                    IconButton(onClick = { controller?.addMediaItem(track.mediaItem()) }, enabled = controller != null) { Icon(Icons.AutoMirrored.Filled.QueueMusic, "Queue recommendation") }
+                                    IconButton(onClick = { library.hideRecommendation(track.id) }) { Icon(Icons.Default.Close, "Not interested") }
+                                }
+                            }
+                        }
+                    }
+                }
+                if (libraryState.hiddenRecommendations.isNotEmpty()) item {
+                    TextButton(onClick = library::resetRecommendationFeedback) { Text("Reset hidden recommendations") }
+                }
+                item { Text("Recently played", style = MaterialTheme.typography.titleLarge) }
+                if (libraryState.recent.isEmpty()) item { Text("Play a song and it will appear here.") }
+            }
+            if (tab == "Library") {
+                item { Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(libraryFilter == "Playlists", { libraryFilter = "Playlists"; selectedPlaylist = null }, { Text("Playlists") })
+                    FilterChip(libraryFilter == "Favorites", { libraryFilter = "Favorites"; selectedPlaylist = null }, { Text("Liked songs") })
+                } }
+                if (libraryFilter == "Playlists") {
+                    if (playlist == null) {
+                        item { Button(onClick = { playlistName = ""; renamingPlaylist = null; playlistEditor = true }) { Text("Create playlist") } }
+                        items(libraryState.playlists, key = { "playlist_${it.id}" }) { item ->
+                            ElevatedCard(onClick = { selectedPlaylist = item.id }) {
+                                ListItem(headlineContent = { Text(item.name) }, supportingContent = { Text("${item.tracks.size} songs") },
+                                    leadingContent = { Icon(Icons.AutoMirrored.Filled.QueueMusic, null) })
+                            }
+                        }
+                    } else {
+                        item {
+                            TextButton(onClick = { selectedPlaylist = null }) { Text("All playlists") }
+                            Text(playlist.name, style = MaterialTheme.typography.headlineSmall)
+                            Row {
+                                Button(enabled = playlist.tracks.isNotEmpty() && controller != null, onClick = {
+                                    controller?.setMediaItems(playlist.tracks.map { it.mediaItem() }); controller?.prepare(); controller?.play()
+                                }) { Text("Play all") }
+                                TextButton(onClick = { playlistName = playlist.name; renamingPlaylist = playlist.id; playlistEditor = true }) { Text("Rename") }
+                                TextButton(onClick = { deletePlaylist = playlist.id }) { Text("Delete") }
+                            }
+                        }
+                    }
+                }
+            }
             if (tab == "Search") {
                 item { OutlinedTextField(query, { query = it }, Modifier.fillMaxWidth(), singleLine = true, placeholder = { Text("Search songs and artists") }, leadingIcon = { Icon(Icons.Default.Search, null) }, trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Default.Close, "Clear search") } }) }
                 if (searching) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
@@ -240,17 +381,41 @@ fun MusicScreen(controller: MediaController?, modifier: Modifier = Modifier) {
                 if (!searching && searchError == null && results.isEmpty()) item { Text(if (query.isBlank()) "Find a song to start listening. No TMDB token needed." else "No songs found.") }
             }
             if (tab == "Queue") {
+                if (queue.isNotEmpty()) item { Text("${queue.size} songs in your queue", style = MaterialTheme.typography.titleMedium) }
                 if (queue.isEmpty()) item { Text("Your queue is empty. Add songs using the queue button.") }
                 items(queue.size, key = { it }) { index ->
                     val item = queue[index]
                     ListItem(headlineContent = { Text(item.mediaMetadata.title?.toString().orEmpty(), maxLines = 2) },
                         supportingContent = { Text(item.mediaMetadata.artist?.toString().orEmpty()) },
                         modifier = Modifier.clickable { controller?.seekToDefaultPosition(index); controller?.prepare(); controller?.play() },
-                        trailingContent = { IconButton(onClick = { controller?.removeMediaItem(index) }) { Icon(Icons.Default.Close, "Remove from queue") } })
+                        trailingContent = { Row {
+                            IconButton(onClick = { controller?.moveMediaItem(index, index - 1) }, enabled = index > 0) { Icon(Icons.Default.KeyboardArrowUp, "Move song up") }
+                            IconButton(onClick = { controller?.moveMediaItem(index, index + 1) }, enabled = index < queue.lastIndex) { Icon(Icons.Default.KeyboardArrowDown, "Move song down") }
+                            IconButton(onClick = { controller?.removeMediaItem(index) }) { Icon(Icons.Default.Close, "Remove from queue") }
+                        } })
                 }
             } else {
-                val tracks = when (tab) { "Favorites" -> libraryState.favorites; "Downloads" -> libraryState.downloads.map { it.track }; else -> results }
-                if (tracks.isEmpty() && tab != "Search") item { Text("No ${tab.lowercase(Locale.ROOT)} yet.") }
+                val tracks = when (tab) {
+                    "Home" -> libraryState.recent
+                    "Library" -> if (libraryFilter == "Favorites") libraryState.favorites else playlist?.tracks.orEmpty()
+                    "Downloads" -> libraryState.downloads.map { it.track }
+                    "Search" -> results
+                    else -> emptyList()
+                }
+                if (tracks.isNotEmpty() && (tab == "Downloads" || (tab == "Library" && libraryFilter == "Favorites"))) item {
+                    val playable = if (tab == "Downloads") tracks.filter { libraryState.downloadStatus[it.id] == "Saved" } else tracks
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Button(enabled = controller != null && playable.isNotEmpty(), onClick = {
+                            controller?.shuffleModeEnabled = false
+                            controller?.setMediaItems(playable.map { it.mediaItem() }); controller?.prepare(); controller?.play()
+                        }) { Text("Play all") }
+                        OutlinedButton(enabled = controller != null && playable.isNotEmpty(), onClick = {
+                            controller?.shuffleModeEnabled = true
+                            controller?.setMediaItems(playable.map { it.mediaItem() }); controller?.prepare(); controller?.play()
+                        }) { Text("Shuffle") }
+                    }
+                }
+                if (tracks.isEmpty() && (tab == "Downloads" || (tab == "Library" && (playlist != null || libraryFilter == "Favorites")))) item { Text("No ${tab.lowercase(Locale.ROOT)} yet.") }
                 items(tracks, key = { it.id }) { track ->
                     Card {
                         ListItem(headlineContent = { Text(track.title, maxLines = 2, overflow = TextOverflow.Ellipsis) }, supportingContent = { Text(track.artist, maxLines = 1) },
@@ -258,6 +423,7 @@ fun MusicScreen(controller: MediaController?, modifier: Modifier = Modifier) {
                         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                             IconToggleButton(libraryState.favorites.any { it.id == track.id }, { library.favorite(track) }) { Icon(if (libraryState.favorites.any { it.id == track.id }) Icons.Default.Favorite else Icons.Default.FavoriteBorder, "Favorite") }
                             IconButton(onClick = { controller?.addMediaItem(track.mediaItem()); library.message("Added to queue") }, enabled = controller != null) { Icon(Icons.AutoMirrored.Filled.QueueMusic, "Add to queue") }
+                            IconButton(onClick = { addTrack = track }) { Icon(Icons.AutoMirrored.Filled.PlaylistAdd, "Add to playlist") }
                             if (tab == "Downloads") {
                                 Text(libraryState.downloadStatus[track.id] ?: "Queued", Modifier.weight(1f), style = MaterialTheme.typography.labelSmall)
                                 if (libraryState.downloadStatus[track.id] == "Saved") IconButton(enabled = !exporting && pendingExport == null, onClick = {
@@ -266,14 +432,23 @@ fun MusicScreen(controller: MediaController?, modifier: Modifier = Modifier) {
                                 }) { Icon(Icons.Default.SaveAlt, "Save audio to files") }
                                 IconButton(onClick = { library.removeDownload(track) }) { Icon(Icons.Default.Delete, "Remove download") }
                             } else {
+                                IconButton(enabled = controller != null, onClick = {
+                                    controller?.let { it.addMediaItem((it.currentMediaItemIndex + 1).coerceIn(0, it.mediaItemCount), track.mediaItem()) }
+                                    library.message("Song will play next")
+                                }) { Icon(Icons.AutoMirrored.Filled.PlaylistPlay, "Play next") }
                                 Spacer(Modifier.weight(1f))
                                 IconButton(onClick = { library.download(track) }, enabled = libraryState.downloads.none { it.track.id == track.id }) { Icon(Icons.Default.Download, "Download audio") }
                             }
                         }
+                        if (tab == "Library" && playlist != null) Row {
+                            TextButton(onClick = { library.movePlaylistTrack(playlist.id, track.id, -1) }, enabled = playlist.tracks.firstOrNull()?.id != track.id) { Text("Move up") }
+                            TextButton(onClick = { library.movePlaylistTrack(playlist.id, track.id, 1) }, enabled = playlist.tracks.lastOrNull()?.id != track.id) { Text("Move down") }
+                            TextButton(onClick = { library.removeFromPlaylist(playlist.id, track.id) }) { Text("Remove") }
+                        }
                     }
                 }
             }
-            item {
+            if (tab == "Downloads" || tab == "Library") item {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text("Wi-Fi downloads only", Modifier.weight(1f))
                     Switch(libraryState.wifiOnly, library::setWifiOnly)

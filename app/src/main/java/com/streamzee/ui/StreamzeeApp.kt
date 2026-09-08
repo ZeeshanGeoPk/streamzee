@@ -1,6 +1,17 @@
 package com.streamzee.ui
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.material3.FilterChip
+import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.MusicNote
 import com.streamzee.music.MusicScreen
 import com.streamzee.music.MusicMiniPlayer
@@ -49,6 +60,7 @@ fun streamzeeApp(viewModel: MainViewModel) {
     val uiState = viewModel.uiState.collectAsState().value
     val screen = uiState.currentScreen
     val musicController = rememberMusicController()
+    var musicSection by rememberSaveable { mutableStateOf("Home") }
     val goBack: () -> Unit = {
         if (!viewModel.navigateBack() && screen !is Screen.Home) {
             viewModel.openHome(addToBackStack = false)
@@ -61,8 +73,8 @@ fun streamzeeApp(viewModel: MainViewModel) {
             screen is Screen.Downloads ||
             screen is Screen.Profile || screen is Screen.Music
 
-    BackHandler(enabled = screen !is Screen.Setup && (screen !is Screen.Home || uiState.backStack.isNotEmpty())) {
-        goBack()
+    BackHandler(enabled = screen !is Screen.Setup && (screen !is Screen.Home || uiState.backStack.isNotEmpty()) && (screen !is Screen.Music || musicSection != "Home")) {
+        if (screen is Screen.Music) musicSection = "Home" else goBack()
     }
 
     streamzeeTheme(themeMode = uiState.themeMode, accentName = uiState.accentColor) {
@@ -70,86 +82,55 @@ fun streamzeeApp(viewModel: MainViewModel) {
         Surface(modifier = Modifier.fillMaxSize(), color = colors.background) {
             Box(modifier = Modifier.fillMaxSize()) {
                 Scaffold(
+                topBar = {
+                    if (showBottomBar || screen is Screen.Setup) {
+                        Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 16.dp, vertical = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            FilterChip(selected = screen !is Screen.Music,
+                                onClick = { viewModel.selectContentMode(false) },
+                                label = { Text("Movies · TV · Anime") }, modifier = Modifier.weight(1f))
+                            FilterChip(selected = screen is Screen.Music,
+                                onClick = { viewModel.selectContentMode(true) },
+                                label = { Text("Music") }, modifier = Modifier.weight(1f))
+                        }
+                    }
+                },
                 bottomBar = {
                     if (showBottomBar) {
                         Column {
-                        MusicMiniPlayer(musicController, viewModel::openMusic)
-                        NavigationBar(
-                            containerColor = colors.surface,
-                            tonalElevation = 8.dp
-                        ) {
-                            NavigationBarItem(
-                                alwaysShowLabel = false,                                selected = screen is Screen.Home,
-                                onClick = { viewModel.openHome() },
-                                icon = { Icon(imageVector = Icons.Default.Home, contentDescription = "Home") },
-                                label = { Text("Home") },
-                                colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = colors.primary,
-                                    selectedTextColor = colors.primary,
-                                    indicatorColor = colors.primaryContainer,
-                                    unselectedIconColor = colors.onSurfaceVariant,
-                                    unselectedTextColor = colors.onSurfaceVariant
-                                )
-                            )
-                            NavigationBarItem(
-                                alwaysShowLabel = false,                                selected = screen is Screen.Search,
-                                onClick = { viewModel.openSearch() },
-                                icon = { Icon(imageVector = Icons.Default.Search, contentDescription = "Explore") },
-                                label = { Text("Explore") },
-                                colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = colors.primary,
-                                    selectedTextColor = colors.primary,
-                                    indicatorColor = colors.primaryContainer,
-                                    unselectedIconColor = colors.onSurfaceVariant,
-                                    unselectedTextColor = colors.onSurfaceVariant
-                                )
-                            )
-                            NavigationBarItem(
-                                alwaysShowLabel = false,                                selected = screen is Screen.Downloads,
-                                onClick = { viewModel.openDownloads() },
-                                icon = { Icon(imageVector = Icons.Default.Download, contentDescription = "Downloads") },
-                                label = { Text("Downloads") },
-                                colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = colors.primary,
-                                    selectedTextColor = colors.primary,
-                                    indicatorColor = colors.primaryContainer,
-                                    unselectedIconColor = colors.onSurfaceVariant,
-                                    unselectedTextColor = colors.onSurfaceVariant
-                                )
-                            )
-                            NavigationBarItem(
-                                alwaysShowLabel = false,                                selected = screen is Screen.Library,
-                                onClick = { viewModel.openLibrary() },
-                                icon = { Icon(imageVector = Icons.Default.Favorite, contentDescription = "Watchlist") },
-                                label = { Text("Watchlist") },
-                                colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = colors.primary,
-                                    selectedTextColor = colors.primary,
-                                    indicatorColor = colors.primaryContainer,
-                                    unselectedIconColor = colors.onSurfaceVariant,
-                                    unselectedTextColor = colors.onSurfaceVariant
-                                )
-                            )
-                            NavigationBarItem(
-                                alwaysShowLabel = false,                                selected = screen is Screen.Music,
-                                onClick = viewModel::openMusic,
-                                icon = { Icon(Icons.Default.MusicNote, "Music") },
-                                label = { Text("Music") },
-                            )
-                            NavigationBarItem(
-                                alwaysShowLabel = false,                                selected = screen is Screen.Profile,
-                                onClick = { viewModel.openProfile() },
-                                icon = { Icon(imageVector = Icons.Default.Person, contentDescription = "Profile") },
-                                label = { Text("Profile") },
-                                colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = colors.primary,
-                                    selectedTextColor = colors.primary,
-                                    indicatorColor = colors.primaryContainer,
-                                    unselectedIconColor = colors.onSurfaceVariant,
-                                    unselectedTextColor = colors.onSurfaceVariant
-                                )
-                            )
-                        }
+                            if (screen !is Screen.Music || musicSection != "Now playing") {
+                                MusicMiniPlayer(musicController) {
+                                    musicSection = "Now playing"
+                                    viewModel.openMusic()
+                                }
+                            }
+                            NavigationBar(containerColor = colors.surface, tonalElevation = 8.dp) {
+                                if (screen is Screen.Music) {
+                                    val destinations = listOf(
+                                        Triple("Home", Icons.Default.Home, "Home"),
+                                        Triple("Search", Icons.Default.Search, "Search"),
+                                        Triple("Library", Icons.Default.LibraryMusic, "Library"),
+                                        Triple("Downloads", Icons.Default.Download, "Offline"),
+                                        Triple("Queue", Icons.AutoMirrored.Filled.QueueMusic, "Queue"),
+                                    )
+                                    destinations.forEach { (destination, icon, label) ->
+                                        NavigationBarItem(selected = musicSection == destination,
+                                            onClick = { musicSection = destination },
+                                            icon = { Icon(icon, label) }, label = { Text(label) })
+                                    }
+                                } else {
+                                    NavigationBarItem(selected = screen is Screen.Home, onClick = { viewModel.openHome() },
+                                        icon = { Icon(Icons.Default.Home, "Home") }, label = { Text("Home") })
+                                    NavigationBarItem(selected = screen is Screen.Search, onClick = viewModel::openSearch,
+                                        icon = { Icon(Icons.Default.Search, "Explore") }, label = { Text("Explore") })
+                                    NavigationBarItem(selected = screen is Screen.Library, onClick = viewModel::openLibrary,
+                                        icon = { Icon(Icons.Default.Favorite, "Watchlist") }, label = { Text("Watchlist") })
+                                    NavigationBarItem(selected = screen is Screen.Downloads, onClick = viewModel::openDownloads,
+                                        icon = { Icon(Icons.Default.Download, "Downloads") }, label = { Text("Downloads") })
+                                    NavigationBarItem(selected = screen is Screen.Profile, onClick = viewModel::openProfile,
+                                        icon = { Icon(Icons.Default.Person, "Profile") }, label = { Text("Profile") })
+                                }
+                            }
                         }
                     }
                 }
@@ -387,7 +368,7 @@ fun streamzeeApp(viewModel: MainViewModel) {
                         onBack = goBack,
                         modifier = contentModifier,
                     )
-                    is Screen.Music -> MusicScreen(musicController, contentModifier)
+                    is Screen.Music -> MusicScreen(musicController, contentModifier, musicSection, { musicSection = it })
                     is Screen.OfflinePlayer -> offlinePlayerScreen(
                         downloadId = screen.downloadId,
                         onBack = goBack,

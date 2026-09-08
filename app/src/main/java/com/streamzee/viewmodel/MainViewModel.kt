@@ -193,7 +193,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var movieWatchProgressJob: Job? = null
     private var animeWatchProgressJob: Job? = null
 
-    private val _uiState = MutableStateFlow(MainUiState())
+    private val _uiState = MutableStateFlow(MainUiState(currentScreen =
+        if (application.getSharedPreferences("content_mode", android.content.Context.MODE_PRIVATE).getBoolean("music", false)) Screen.Music else Screen.Setup))
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
 
     private fun navigateTo(screen: Screen, addToBackStack: Boolean = true) {
@@ -261,7 +262,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             repository.apiKeyFlow().distinctUntilChanged().collectLatest { apiKey ->
                 _uiState.update { state ->
                     val screen = if (apiKey.isNullOrBlank()) {
-                        Screen.Setup
+                        if (state.currentScreen is Screen.Music) Screen.Music else Screen.Setup
                     } else if (state.currentScreen is Screen.Setup) {
                         Screen.Home
                     } else {
@@ -898,7 +899,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         navigateTo(Screen.OfflinePlayer(id))
     }
 
-    fun openMusic() { navigateTo(Screen.Music) }
+    fun openMusic() = selectContentMode(true)
+
+    fun selectContentMode(music: Boolean) {
+        getApplication<Application>().getSharedPreferences("content_mode", android.content.Context.MODE_PRIVATE)
+            .edit().putBoolean("music", music).apply()
+        detailsJob?.cancel()
+        _uiState.update { it.copy(
+            currentScreen = if (music) Screen.Music else if (it.apiKey.isNullOrBlank()) Screen.Setup else Screen.Home,
+            backStack = emptyList(), isLoading = false, errorMessage = null,
+        ) }
+    }
 
     fun openProfile() {
         navigateTo(Screen.Profile)

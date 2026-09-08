@@ -85,7 +85,14 @@ class MusicService : MediaSessionService() {
                 MusicStatus.mutable.value = null
                 persistQueue()
             }
-            override fun onIsPlayingChanged(isPlaying: Boolean) { persistQueue() }
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                persistQueue()
+                if (isPlaying) player.currentMediaItem?.let { item ->
+                    library.recordPlayed(MusicTrack(item.mediaId, item.mediaMetadata.title.toString(),
+                        item.mediaMetadata.artist.toString(), item.mediaMetadata.artworkUri?.toString(),
+                        player.duration.coerceAtLeast(0) / 1000))
+                }
+            }
             override fun onPlayerError(error: PlaybackException) {
                 val id = player.currentMediaItem?.mediaId
                 if (id != null && retriedId != id && error.errorCode == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS) {

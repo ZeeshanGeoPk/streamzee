@@ -176,7 +176,8 @@ for in-app playback; saving a local file creates an independent copy.
 
 ## Music
 
-Open **Music** from the bottom navigation, or choose **Listen to Music** on setup.
+Use the **Music / Movies · TV · Anime** selector at the top of the app. Your choice is remembered.
+Music has its own Home, Search, Library, Offline, and Queue navigation; Watch keeps Home, Explore, Watchlist, Downloads, and Profile.
 Music does not require a TMDB token or a Google login.
 
 - Search YouTube Music songs and artists with debounced search and retry.
@@ -196,7 +197,7 @@ Music does not require a TMDB token or a Google login.
 
 This is an unofficial, independent integration using NewPipe Extractor v0.26.5.
 Availability depends on YouTube Music's regional support and provider changes.
-Account synchronization, lyrics, recommendations, and cloud playlists are not
+Account synchronization, lyrics, and cloud playlist sync are not
 implemented. See [third-party notices](THIRD_PARTY_NOTICES.md) for the GPL
 requirements that apply to distributing builds with the extractor.
 
@@ -211,3 +212,28 @@ Ordinary unit tests skip the network check. The live check searches music,
 resolves an audio URL, and requests an initial audio byte range. Device checks
 should cover screen-off playback, notification controls, headphone disconnect,
 airplane-mode download playback, queue restore, sleep timer, and file export.
+
+### Music library and navigation
+
+Music Home includes mood searches, recently played songs, liked songs and offline shortcuts.
+Tap the mini-player to open Now Playing. In Library, create, rename and delete local playlists;
+add songs using **Add to playlist**, and reorder or remove tracks inside each playlist.
+Favorites and completed downloads support Play all and Shuffle. Queue supports Play next,
+adding songs, reordering and removal. Playlists, favorites and recent listening stay on-device.
+The Music and Watch navigation areas are separate; switching modes does not interrupt music.
+
+### Personalized music recommendations
+
+Music Home now includes **Made for you**. Streamzee scores artists locally from
+liked songs, recent listening (weighted by recency), and playlist tracks, then
+searches YouTube Music for up to three artists. Ranked picks exclude songs already
+liked, recently played, saved in playlists, or dismissed; artist repetition is limited.
+Each card explains the artist that inspired the suggestion and supports play, like,
+queue, and **Not interested**. Use **Reset hidden recommendations** to undo dismissals.
+
+Picks are saved locally and reused for up to six hours when your taste inputs have
+not changed. Refresh requests new candidates; saved picks remain visible if offline.
+Viewing cached picks offline does not download their audio. New listeners see a prompt
+to play or like songs first. This is local preference-based discovery, not Google account
+personalization or a collaborative recommendation model. Only artist search queries,
+not the full listening history or playlists, are sent for recommendation discovery.
