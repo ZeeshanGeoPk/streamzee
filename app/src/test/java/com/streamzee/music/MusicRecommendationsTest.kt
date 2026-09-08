@@ -41,4 +41,17 @@ class MusicRecommendationsTest {
     @Test fun boundsDiscoveryToThreeArtists() {
         assertEquals(3, recommendationSeeds(MusicLibraryState(favorites = (1..20).map { song("$it", "Artist $it") })).size)
     }
+    @Test fun autoplayExcludesQueueDeduplicatesAndHonorsLimit() {
+        val recommendations = listOf(
+            MusicRecommendation(song("queued"), "reason"),
+            MusicRecommendation(song("one"), "reason"),
+        )
+        val result = autoplayCandidates(
+            recommendations,
+            listOf(song("one"), song("two"), song("three")),
+            setOf("queued"),
+            limit = 2,
+        )
+        assertEquals(listOf("one", "two"), result.map { it.id })
+    }
 }

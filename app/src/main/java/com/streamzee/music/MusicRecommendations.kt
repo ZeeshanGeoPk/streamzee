@@ -46,3 +46,15 @@ internal fun rankRecommendations(
         if (count >= 4) false else { artistCounts[key] = count + 1; true }
     }.take(20).map { MusicRecommendation(it.track, it.reason) }
 }
+
+internal fun autoplayCandidates(
+    recommendations: List<MusicRecommendation>,
+    fallback: List<MusicTrack>,
+    excludedIds: Set<String>,
+    limit: Int = 5,
+): List<MusicTrack> = (recommendations.map { it.track } + fallback)
+    .asSequence()
+    .filter { it.id !in excludedIds && it.title.isNotBlank() }
+    .distinctBy { it.id }
+    .take(limit.coerceAtLeast(0))
+    .toList()

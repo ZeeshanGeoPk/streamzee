@@ -26,6 +26,8 @@ import java.io.File
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 
 object MusicStatus {
     internal val mutable = MutableStateFlow<String?>(null)
@@ -52,6 +54,7 @@ class MusicService : MediaSessionService() {
     private var sleepJob: Job? = null
     private var restoring = true
     private var retriedId: String? = null
+    private var autoplayJob: Job? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -84,6 +87,7 @@ class MusicService : MediaSessionService() {
                 retriedId = null
                 MusicStatus.mutable.value = null
                 persistQueue()
+                appendAutoplayIfNeeded(library)
             }
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 persistQueue()
@@ -143,9 +147,42 @@ class MusicService : MediaSessionService() {
         session = MediaSession.Builder(this, player).setCallback(callback).setSessionActivity(intent).build()
         restoreQueue()
         restoring = false
+        scope.launch {
+            library.state.map { it.autoplayEnabled }.distinctUntilChanged().collect { enabled ->
+                if (enabled) appendAutoplayIfNeeded(library)
+            }
+        }
         scope.launch { while (isActive) { delay(5000); persistQueue(); MusicStatus.cacheSize.value = cache.cacheSpace } }
     }
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = session
+    private fun appendAutoplayIfNeeded(library: MusicLibrary) {
+        if (!library.state.value.autoplayEnabled || player.mediaItemCount == 0 ||
+            player.currentMediaItemIndex < player.mediaItemCount - 2 || autoplayJob?.isActive == true) return
+        val current = player.currentMediaItem ?: return
+        val excluded = (0 until player.mediaItemCount).map { player.getMediaItemAt(it).mediaId }.toSet()
+        autoplayJob = scope.launch {
+            val fallback = if (library.state.value.recommendations.any { it.track.id !in excluded }) {
+                emptyList()
+            } else {
+                val artist = current.mediaMetadata.artist?.toString().orEmpty()
+                if (artist.isBlank()) emptyList() else try {
+                    withContext(Dispatchers.IO) { YouTubeMusicSource.search(artist) }
+                } catch (error: Exception) {
+                    if (error is CancellationException) throw error
+                    emptyList()
+                }
+            }
+            val additions = autoplayCandidates(
+                library.state.value.recommendations,
+                fallback,
+                excluded,
+            )
+            if (library.state.value.autoplayEnabled && additions.isNotEmpty()) {
+                player.addMediaItems(additions.map { it.mediaItem() })
+                persistQueue()
+            }
+        }
+    }
     private fun persistQueue() {
         if (restoring) return
         val tracks = (0 until player.mediaItemCount).map { index ->

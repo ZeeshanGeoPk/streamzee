@@ -20,6 +20,7 @@ data class MusicLibraryState(
     val hiddenRecommendations: Set<String> = emptySet(),
     val isLoadingRecommendations: Boolean = false,
     val recommendationError: String? = null,
+    val autoplayEnabled: Boolean = true,
     val playlists: List<MusicPlaylist> = emptyList(),
     val recent: List<MusicTrack> = emptyList(),
     val favorites: List<MusicTrack> = emptyList(),
@@ -39,6 +40,7 @@ class MusicLibrary private constructor(context: Context) {
     private val _state = MutableStateFlow(MusicLibraryState(
         recommendations = read("recommendations"),
         hiddenRecommendations = prefs.getStringSet("hidden_recommendations", emptySet()).orEmpty().toSet(),
+        autoplayEnabled = prefs.getBoolean("autoplay_enabled", true),
         playlists = read("playlists"), recent = read("recent"), favorites = read("favorites"), downloads = read("downloads"), wifiOnly = prefs.getBoolean("wifi_only", true),
     ))
     val state = _state.asStateFlow()
@@ -66,6 +68,11 @@ class MusicLibrary private constructor(context: Context) {
         val next = if (old.any { it.id == track.id }) old.filterNot { it.id == track.id } else listOf(track) + old
         _state.value = _state.value.copy(favorites = next)
         prefs.edit().putString("favorites", gson.toJson(next)).apply()
+    }
+    fun setAutoplay(enabled: Boolean) {
+        prefs.edit().putBoolean("autoplay_enabled", enabled).apply()
+        _state.value = _state.value.copy(autoplayEnabled = enabled)
+        message(if (enabled) "Autoplay is on" else "Autoplay is off")
     }
     fun refreshRecommendations(force: Boolean = false) {
         val snapshot = _state.value

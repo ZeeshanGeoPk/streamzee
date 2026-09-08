@@ -237,3 +237,12 @@ Viewing cached picks offline does not download their audio. New listeners see a 
 to play or like songs first. This is local preference-based discovery, not Google account
 personalization or a collaborative recommendation model. Only artist search queries,
 not the full listening history or playlists, are sent for recommendation discovery.
+
+Music Home uses a modern shelf-based layout with a daily-sound hero, colorful mood
+shortcuts, quick access to liked and offline music, personalized cards, and a
+horizontal Jump back in row. **Autoplay** is enabled by default and can be switched
+on or off from Home or Now Playing. When enabled, Streamzee adds up to five fresh,
+non-duplicate recommendations as the queue approaches its end. The preference is
+saved on-device. If personalized picks are unavailable, it searches around the
+current artist; offline playback ends normally when no saved or cached candidate
+can be played.

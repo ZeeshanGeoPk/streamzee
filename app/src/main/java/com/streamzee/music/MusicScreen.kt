@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -21,6 +22,10 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -228,8 +233,15 @@ fun MusicScreen(controller: MediaController?, modifier: Modifier = Modifier,
     Scaffold(modifier = modifier, snackbarHost = { SnackbarHost(snackbar) }, contentWindowInsets = WindowInsets(0)) { padding ->
         LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
-                Text(if (tab == "Home") "Your music" else tab, style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
-                Text("Your soundtrack, anywhere", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (tab == "Home") {
+                    val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+                    Text(when (hour) { in 5..11 -> "Good morning"; in 12..16 -> "Good afternoon"; else -> "Good evening" },
+                        style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.ExtraBold)
+                    Text("Sound picked around you", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else {
+                    Text(tab, style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+                    Text("Your soundtrack, anywhere", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
             if (current != null && controller != null && (tab == "Now playing" || tab == "Home")) item {
                 Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
@@ -268,6 +280,15 @@ fun MusicScreen(controller: MediaController?, modifier: Modifier = Modifier,
                                 Icon(if (controller.repeatMode == Player.REPEAT_MODE_ONE) Icons.Default.RepeatOne else Icons.Default.Repeat, "Repeat: ${controller.repeatMode}", tint = if (controller.repeatMode == 0) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary)
                             }
                         }
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.AllInclusive, null,
+                                tint = if (libraryState.autoplayEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                            Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+                                Text("Autoplay", fontWeight = FontWeight.SemiBold)
+                                Text("Keep similar music playing", style = MaterialTheme.typography.bodySmall)
+                            }
+                            Switch(libraryState.autoplayEnabled, library::setAutoplay)
+                        }
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             item { TextButton(onClick = {
                                 val speed = controller.playbackParameters.speed
@@ -290,10 +311,53 @@ fun MusicScreen(controller: MediaController?, modifier: Modifier = Modifier,
                 Button(onClick = { onSectionChanged("Search") }) { Text("Find music") }
             }
             if (tab == "Home") {
-                item { Text("Find your mood", style = MaterialTheme.typography.titleLarge) }
+                val featured = libraryState.recommendations.firstOrNull()?.track
+                    ?: libraryState.recent.firstOrNull()
+                    ?: libraryState.favorites.firstOrNull()
+                item {
+                    Box(
+                        Modifier.fillMaxWidth().height(190.dp)
+                            .clip(RoundedCornerShape(24.dp))
+                            .background(Brush.linearGradient(listOf(
+                                MaterialTheme.colorScheme.primary,
+                                MaterialTheme.colorScheme.tertiaryContainer,
+                                Color(0xFF15101F),
+                            )))
+                            .clickable(enabled = featured != null) { featured?.let(::play) }
+                            .padding(20.dp)
+                    ) {
+                        Column(Modifier.align(Alignment.BottomStart).fillMaxWidth(0.72f)) {
+                            Text("YOUR DAILY SOUND", color = Color.White.copy(alpha = .78f), style = MaterialTheme.typography.labelMedium)
+                            Text(featured?.title ?: "Start your soundtrack", color = Color.White,
+                                style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold,
+                                maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            Text(featured?.artist ?: "Play or like songs to shape your mixes", color = Color.White.copy(alpha = .8f), maxLines = 1)
+                        }
+                        FilledIconButton(onClick = { featured?.let(::play) }, enabled = featured != null,
+                            modifier = Modifier.align(Alignment.BottomEnd).size(56.dp),
+                            colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color.White, contentColor = Color.Black)) {
+                            Icon(Icons.Default.PlayArrow, "Play daily sound", Modifier.size(30.dp))
+                        }
+                    }
+                }
+                item {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.AllInclusive, null, tint = MaterialTheme.colorScheme.primary)
+                        Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+                            Text("Autoplay", fontWeight = FontWeight.Bold)
+                            Text("Similar songs continue when your queue ends", style = MaterialTheme.typography.bodySmall)
+                        }
+                        Switch(libraryState.autoplayEnabled, library::setAutoplay)
+                    }
+                }
+                item { Text("Browse your vibe", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) }
                 item { LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(listOf("Chill", "Workout", "Focus", "Jazz", "Classical", "Pop")) { mood ->
-                        SuggestionChip(onClick = { query = "$mood music"; onSectionChanged("Search") }, label = { Text(mood) })
+                    items(listOf("Chill" to Color(0xFF355C7D), "Workout" to Color(0xFFE8505B), "Focus" to Color(0xFF5C4B99),
+                        "Jazz" to Color(0xFFB7791F), "Classical" to Color(0xFF476A6F), "Pop" to Color(0xFFC94B8C))) { (mood, color) ->
+                        Surface(onClick = { query = "$mood music"; onSectionChanged("Search") }, color = color,
+                            shape = RoundedCornerShape(18.dp), modifier = Modifier.width(130.dp).height(76.dp)) {
+                            Box(Modifier.padding(14.dp)) { Text(mood, color = Color.White, fontWeight = FontWeight.ExtraBold, modifier = Modifier.align(Alignment.BottomStart)) }
+                        }
                     }
                 } }
                 item {
@@ -342,8 +406,22 @@ fun MusicScreen(controller: MediaController?, modifier: Modifier = Modifier,
                 if (libraryState.hiddenRecommendations.isNotEmpty()) item {
                     TextButton(onClick = library::resetRecommendationFeedback) { Text("Reset hidden recommendations") }
                 }
-                item { Text("Recently played", style = MaterialTheme.typography.titleLarge) }
+                item { Text("Jump back in", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) }
                 if (libraryState.recent.isEmpty()) item { Text("Play a song and it will appear here.") }
+                if (libraryState.recent.isNotEmpty()) item {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        items(libraryState.recent.take(12), key = { "recent_${it.id}" }) { track ->
+                            Column(Modifier.width(148.dp).clickable { play(track) }) {
+                                AsyncImage(track.artwork, null, Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(12.dp)),
+                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+                                Text(track.title, maxLines = 2, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.padding(top = 8.dp))
+                                Text(track.artist, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
             }
             if (tab == "Library") {
                 item { Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -396,7 +474,7 @@ fun MusicScreen(controller: MediaController?, modifier: Modifier = Modifier,
                 }
             } else {
                 val tracks = when (tab) {
-                    "Home" -> libraryState.recent
+                    "Home" -> emptyList()
                     "Library" -> if (libraryFilter == "Favorites") libraryState.favorites else playlist?.tracks.orEmpty()
                     "Downloads" -> libraryState.downloads.map { it.track }
                     "Search" -> results
