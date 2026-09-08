@@ -6,11 +6,17 @@
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="file" path="offline_media/" />
+        <exclude domain="file" path="music_stream_cache/" />
+        <exclude domain="external" path="Music/" />
+        <exclude domain="sharedpref" path="music_downloads.xml" />
         <exclude domain="database" path="exoplayer_internal.db" />
         <exclude domain="sharedpref" path="streamzee_downloads.xml" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="file" path="offline_media/" />
+        <exclude domain="file" path="music_stream_cache/" />
+        <exclude domain="external" path="Music/" />
+        <exclude domain="sharedpref" path="music_downloads.xml" />
         <exclude domain="database" path="exoplayer_internal.db" />
         <exclude domain="sharedpref" path="streamzee_downloads.xml" />
     </device-transfer>

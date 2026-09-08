@@ -57,6 +57,7 @@ sealed interface Screen {
     object Library : Screen
     object Downloads : Screen
     object Profile : Screen
+    object Music : Screen
     data class HomeBrowse(val section: HomeSection) : Screen
     data class Details(val movie: TmdbMovie) : Screen
     data class Player(
@@ -896,6 +897,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun playOfflineDownload(id: String) {
         navigateTo(Screen.OfflinePlayer(id))
     }
+
+    fun openMusic() { navigateTo(Screen.Music) }
 
     fun openProfile() {
         navigateTo(Screen.Profile)

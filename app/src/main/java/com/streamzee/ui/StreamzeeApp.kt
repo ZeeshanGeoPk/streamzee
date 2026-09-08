@@ -1,5 +1,10 @@
 package com.streamzee.ui
 
+import androidx.compose.foundation.layout.Column
+import androidx.compose.material.icons.filled.MusicNote
+import com.streamzee.music.MusicScreen
+import com.streamzee.music.MusicMiniPlayer
+import com.streamzee.music.rememberMusicController
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -43,6 +48,7 @@ import com.streamzee.viewmodel.Screen
 fun streamzeeApp(viewModel: MainViewModel) {
     val uiState = viewModel.uiState.collectAsState().value
     val screen = uiState.currentScreen
+    val musicController = rememberMusicController()
     val goBack: () -> Unit = {
         if (!viewModel.navigateBack() && screen !is Screen.Home) {
             viewModel.openHome(addToBackStack = false)
@@ -53,7 +59,7 @@ fun streamzeeApp(viewModel: MainViewModel) {
             screen is Screen.Search ||
             screen is Screen.Library ||
             screen is Screen.Downloads ||
-            screen is Screen.Profile
+            screen is Screen.Profile || screen is Screen.Music
 
     BackHandler(enabled = screen !is Screen.Setup && (screen !is Screen.Home || uiState.backStack.isNotEmpty())) {
         goBack()
@@ -66,12 +72,14 @@ fun streamzeeApp(viewModel: MainViewModel) {
                 Scaffold(
                 bottomBar = {
                     if (showBottomBar) {
+                        Column {
+                        MusicMiniPlayer(musicController, viewModel::openMusic)
                         NavigationBar(
                             containerColor = colors.surface,
                             tonalElevation = 8.dp
                         ) {
                             NavigationBarItem(
-                                selected = screen is Screen.Home,
+                                alwaysShowLabel = false,                                selected = screen is Screen.Home,
                                 onClick = { viewModel.openHome() },
                                 icon = { Icon(imageVector = Icons.Default.Home, contentDescription = "Home") },
                                 label = { Text("Home") },
@@ -84,7 +92,7 @@ fun streamzeeApp(viewModel: MainViewModel) {
                                 )
                             )
                             NavigationBarItem(
-                                selected = screen is Screen.Search,
+                                alwaysShowLabel = false,                                selected = screen is Screen.Search,
                                 onClick = { viewModel.openSearch() },
                                 icon = { Icon(imageVector = Icons.Default.Search, contentDescription = "Explore") },
                                 label = { Text("Explore") },
@@ -97,7 +105,7 @@ fun streamzeeApp(viewModel: MainViewModel) {
                                 )
                             )
                             NavigationBarItem(
-                                selected = screen is Screen.Downloads,
+                                alwaysShowLabel = false,                                selected = screen is Screen.Downloads,
                                 onClick = { viewModel.openDownloads() },
                                 icon = { Icon(imageVector = Icons.Default.Download, contentDescription = "Downloads") },
                                 label = { Text("Downloads") },
@@ -110,7 +118,7 @@ fun streamzeeApp(viewModel: MainViewModel) {
                                 )
                             )
                             NavigationBarItem(
-                                selected = screen is Screen.Library,
+                                alwaysShowLabel = false,                                selected = screen is Screen.Library,
                                 onClick = { viewModel.openLibrary() },
                                 icon = { Icon(imageVector = Icons.Default.Favorite, contentDescription = "Watchlist") },
                                 label = { Text("Watchlist") },
@@ -123,7 +131,13 @@ fun streamzeeApp(viewModel: MainViewModel) {
                                 )
                             )
                             NavigationBarItem(
-                                selected = screen is Screen.Profile,
+                                alwaysShowLabel = false,                                selected = screen is Screen.Music,
+                                onClick = viewModel::openMusic,
+                                icon = { Icon(Icons.Default.MusicNote, "Music") },
+                                label = { Text("Music") },
+                            )
+                            NavigationBarItem(
+                                alwaysShowLabel = false,                                selected = screen is Screen.Profile,
                                 onClick = { viewModel.openProfile() },
                                 icon = { Icon(imageVector = Icons.Default.Person, contentDescription = "Profile") },
                                 label = { Text("Profile") },
@@ -136,6 +150,7 @@ fun streamzeeApp(viewModel: MainViewModel) {
                                 )
                             )
                         }
+                        }
                     }
                 }
             ) { contentPadding ->
@@ -146,6 +161,7 @@ fun streamzeeApp(viewModel: MainViewModel) {
                 when (screen) {
                     is Screen.Setup -> setupScreen(
                         onSaveToken = viewModel::saveApiKey,
+                        onOpenMusic = viewModel::openMusic,
                         isLoading = uiState.isLoading,
                         errorMessage = uiState.errorMessage,
                         modifier = contentModifier,
@@ -371,6 +387,7 @@ fun streamzeeApp(viewModel: MainViewModel) {
                         onBack = goBack,
                         modifier = contentModifier,
                     )
+                    is Screen.Music -> MusicScreen(musicController, contentModifier)
                     is Screen.OfflinePlayer -> offlinePlayerScreen(
                         downloadId = screen.downloadId,
                         onBack = goBack,

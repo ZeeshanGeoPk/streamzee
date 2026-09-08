@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun setupScreen(
     onSaveToken: (String) -> Unit,
+    onOpenMusic: () -> Unit,
     isLoading: Boolean,
     errorMessage: String?,
     modifier: Modifier = Modifier,
@@ -105,5 +106,6 @@ fun setupScreen(
                 fontWeight = FontWeight.Bold
             )
         }
+        TextButton(onClick = onOpenMusic) { Text("Listen to Music — no TMDB token needed") }
     }
 }

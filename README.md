@@ -173,3 +173,41 @@ the incomplete output. Export needs temporary free space in addition to the dest
 Unsupported codecs or an incomplete cache can prevent export. It exports the selected audio/video
 tracks; separate subtitle tracks are not included. App-private cache fragments remain the source
 for in-app playback; saving a local file creates an independent copy.
+
+## Music
+
+Open **Music** from the bottom navigation, or choose **Listen to Music** on setup.
+Music does not require a TMDB token or a Google login.
+
+- Search YouTube Music songs and artists with debounced search and retry.
+- Audio-only playback with background, notification and lock-screen controls.
+- Persistent queue and position, favorites, shuffle, repeat, playback speed,
+  15/30/60-minute sleep timers, and a mini-player across the main tabs.
+- Download audio with Android's download manager; progress and failed downloads
+  appear under Music > Downloads. Wi-Fi-only is enabled by default and applies
+  to newly queued downloads. Remove a failed download and queue it again to retry.
+- Saved downloads are preferred during playback. Streaming also uses a separate
+  256 MB cache with automatic eviction; cached portions are not guaranteed to be
+  complete offline songs. Use Download for dependable offline retention.
+- **Save audio to files** exports a completed download to a folder you choose.
+  The original audio format is preserved (not converted to MP3). In-app downloads
+  are app-specific and removed on uninstall; exported copies remain.
+- Clear playback cache without removing downloads or favorites.
+
+This is an unofficial, independent integration using NewPipe Extractor v0.26.5.
+Availability depends on YouTube Music's regional support and provider changes.
+Account synchronization, lyrics, recommendations, and cloud playlists are not
+implemented. See [third-party notices](THIRD_PARTY_NOTICES.md) for the GPL
+requirements that apply to distributing builds with the extractor.
+
+The source adapter is isolated in `music/YouTubeMusicSource.kt`. When YouTube
+changes, update the pinned extractor version and run the optional live check:
+
+```sh
+STREAMZEE_LIVE_MUSIC_TEST=1 ./gradlew :app:testDebugUnitTest --rerun-tasks --tests com.streamzee.music.YouTubeMusicSourceTest
+```
+
+Ordinary unit tests skip the network check. The live check searches music,
+resolves an audio URL, and requests an initial audio byte range. Device checks
+should cover screen-off playback, notification controls, headphone disconnect,
+airplane-mode download playback, queue restore, sleep timer, and file export.
